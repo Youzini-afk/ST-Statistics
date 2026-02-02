@@ -22,6 +22,8 @@ export const CONFIG = {
     // Default settings
     DEFAULT_SETTINGS: Object.freeze({
         cache: {},
-        theme: 'violet' // Default theme
+        theme: 'violet', // Default theme
+        cacheCleanupEnabled: true,
+        cacheCleanupDays: 90
     })
 };

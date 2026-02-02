@@ -23,9 +23,43 @@ if (!extensionSettings[EXTENSION_NAME]) {
 
 const settings = extensionSettings[EXTENSION_NAME];
 
+const CACHE_BACKUP_KEY = 'ST_Stats_CacheBackup';
+
 // Ensure default theme is set (for existing users)
 if (!settings.theme) {
     settings.theme = CONFIG.DEFAULT_SETTINGS.theme || 'violet';
+}
+
+// Ensure cache cleanup settings are set (for existing users)
+if (settings.cacheCleanupEnabled === undefined) {
+    settings.cacheCleanupEnabled = CONFIG.DEFAULT_SETTINGS.cacheCleanupEnabled;
+}
+if (!Number.isFinite(settings.cacheCleanupDays)) {
+    settings.cacheCleanupDays = CONFIG.DEFAULT_SETTINGS.cacheCleanupDays;
+}
+
+// Save settings helper (prefer immediate save)
+function saveSettingsNow() {
+    try {
+        const ctx = globalThis.SillyTavern.getContext();
+        if (typeof ctx.saveSettings === 'function') {
+            ctx.saveSettings();
+            logger.log('Settings saved immediately via context.saveSettings');
+        } else if (typeof ctx.saveSettingsDebounced === 'function') {
+            ctx.saveSettingsDebounced();
+            logger.log('Settings saved via context.saveSettingsDebounced');
+        } else if (typeof globalThis.saveSettings === 'function') {
+            globalThis.saveSettings();
+            logger.log('Settings saved via globalThis.saveSettings');
+        } else if (typeof globalThis.saveSettingsDebounced === 'function') {
+            globalThis.saveSettingsDebounced();
+            logger.log('Settings saved via globalThis.saveSettingsDebounced');
+        } else {
+            logger.warn('No save function available!');
+        }
+    } catch (e) {
+        logger.error('Failed to save settings:', e);
+    }
 }
 
 // Abort controller for cancelling operations
@@ -76,9 +110,6 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
 
     const reportTitle = isGlobalMode ? '全部角色统计' : character.name;
 
-    // Backup cache key for localStorage fallback
-    const CACHE_BACKUP_KEY = 'ST_Stats_CacheBackup';
-
     // Save to localStorage as backup
     const saveToLocalStorage = (cacheData) => {
         try {
@@ -103,30 +134,7 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
         }
     };
 
-    // Get save function from context
-    const saveSettingsNow = () => {
-        try {
-            const ctx = globalThis.SillyTavern.getContext();
-            // Try immediate save first, then debounced
-            if (typeof ctx.saveSettings === 'function') {
-                ctx.saveSettings();
-                logger.log('Settings saved immediately via context.saveSettings');
-            } else if (typeof ctx.saveSettingsDebounced === 'function') {
-                ctx.saveSettingsDebounced();
-                logger.log('Settings saved via context.saveSettingsDebounced');
-            } else if (typeof globalThis.saveSettings === 'function') {
-                globalThis.saveSettings();
-                logger.log('Settings saved via globalThis.saveSettings');
-            } else if (typeof globalThis.saveSettingsDebounced === 'function') {
-                globalThis.saveSettingsDebounced();
-                logger.log('Settings saved via globalThis.saveSettingsDebounced');
-            } else {
-                logger.warn('No save function available!');
-            }
-        } catch (e) {
-            logger.error('Failed to save settings:', e);
-        }
-    };
+    
 
     // Helper to setup events with correct context
     const bindEvents = (statsToUse) => {
@@ -440,6 +448,78 @@ function addWandMenuButton() {
     }
 }
 
+function cleanupCache(days) {
+    if (!settings.cache) return 0;
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    let removed = 0;
+
+    Object.keys(settings.cache).forEach((key) => {
+        const entry = settings.cache[key];
+        const updatedAt = entry?.updatedAt || 0;
+        if (updatedAt && updatedAt < cutoff) {
+            delete settings.cache[key];
+            removed++;
+        }
+    });
+
+    if (settings.cacheIndex) {
+        Object.keys(settings.cacheIndex).forEach((baseKey) => {
+            const key = settings.cacheIndex[baseKey];
+            if (!settings.cache[key]) {
+                delete settings.cacheIndex[baseKey];
+            }
+        });
+    }
+
+    return removed;
+}
+
+function cleanupLocalStorageBackup(days) {
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    let removed = 0;
+
+    try {
+        const backup = JSON.parse(localStorage.getItem(CACHE_BACKUP_KEY) || '{}');
+        Object.keys(backup).forEach((key) => {
+            if (key === '__index') return;
+            const entry = backup[key];
+            const updatedAt = entry?.updatedAt || 0;
+            if (updatedAt && updatedAt < cutoff) {
+                delete backup[key];
+                removed++;
+            }
+        });
+
+        if (backup.__index) {
+            Object.keys(backup.__index).forEach((baseKey) => {
+                const key = backup.__index[baseKey];
+                if (!backup[key]) {
+                    delete backup.__index[baseKey];
+                }
+            });
+        }
+
+        localStorage.setItem(CACHE_BACKUP_KEY, JSON.stringify(backup));
+    } catch (e) {
+        logger.error('localStorage cleanup failed:', e);
+    }
+
+    return removed;
+}
+
+function runCacheCleanup(days, reason = 'manual') {
+    const safeDays = Math.max(1, Math.floor(Number(days) || CONFIG.DEFAULT_SETTINGS.cacheCleanupDays));
+    const removedCache = cleanupCache(safeDays);
+    const removedBackup = cleanupLocalStorageBackup(safeDays);
+
+    if (removedCache > 0 || removedBackup > 0) {
+        saveSettingsNow();
+    }
+
+    logger.log(`Cache cleanup (${reason}): settings=${removedCache}, localStorage=${removedBackup}, days=${safeDays}`);
+    return { removedCache, removedBackup };
+}
+
 /**
  * Add settings panel
  */
@@ -459,6 +539,19 @@ function addSettingsPanel() {
                     <button id="${CONFIG.ANALYZE_BUTTON_ID}_global" class="menu_button" style="margin-top: 5px;">
                         <i class="fa-solid fa-globe"></i> 全部角色统计
                     </button>
+                    <div class="stats-setting-divider"></div>
+                    <div class="stats-setting-row">
+                        <label class="stats-setting-label">
+                            <input type="checkbox" id="stats_cache_cleanup_enabled" /> 自动清理缓存
+                        </label>
+                    </div>
+                    <div class="stats-setting-row">
+                        <label class="stats-setting-label">保留天数</label>
+                        <input type="number" id="stats_cache_cleanup_days" class="stats-input" min="1" max="365" />
+                        <button id="stats_cache_cleanup_now" class="menu_button stats-small-button">
+                            <i class="fa-solid fa-broom"></i> 立即清理
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -467,6 +560,40 @@ function addSettingsPanel() {
     $('#extensions_settings').append(panelHTML);
     $(`#${CONFIG.ANALYZE_BUTTON_ID}`).on('click', () => generateReport(false, false));
     $(`#${CONFIG.ANALYZE_BUTTON_ID}_global`).on('click', () => generateReport(false, true));
+
+    const normalizeDays = (value) => {
+        const num = Math.max(1, Math.floor(Number(value) || CONFIG.DEFAULT_SETTINGS.cacheCleanupDays));
+        return Math.min(num, 365);
+    };
+
+    $('#stats_cache_cleanup_enabled').prop('checked', !!settings.cacheCleanupEnabled);
+    $('#stats_cache_cleanup_days').val(settings.cacheCleanupDays);
+
+    $('#stats_cache_cleanup_enabled').on('change', (e) => {
+        settings.cacheCleanupEnabled = !!e.target.checked;
+        saveSettingsNow();
+        if (settings.cacheCleanupEnabled) {
+            runCacheCleanup(settings.cacheCleanupDays, 'toggle-on');
+        }
+    });
+
+    $('#stats_cache_cleanup_days').on('change', (e) => {
+        const days = normalizeDays(e.target.value);
+        settings.cacheCleanupDays = days;
+        $('#stats_cache_cleanup_days').val(days);
+        saveSettingsNow();
+        if (settings.cacheCleanupEnabled) {
+            runCacheCleanup(days, 'days-change');
+        }
+    });
+
+    $('#stats_cache_cleanup_now').on('click', () => {
+        const days = normalizeDays($('#stats_cache_cleanup_days').val());
+        const result = runCacheCleanup(days, 'manual');
+        if (globalThis.toastr) {
+            globalThis.toastr.success(`已清理缓存：设置 ${result.removedCache} 条，本地备份 ${result.removedBackup} 条`, 'Stats');
+        }
+    });
 }
 
 /**
@@ -487,6 +614,11 @@ jQuery(async () => {
         // Add UI elements
         addSettingsPanel();
         addWandMenuButton();
+
+        // Auto cleanup cache on startup if enabled
+        if (settings.cacheCleanupEnabled) {
+            runCacheCleanup(settings.cacheCleanupDays, 'startup');
+        }
 
         logger.log('Extension initialized.');
     } catch (error) {

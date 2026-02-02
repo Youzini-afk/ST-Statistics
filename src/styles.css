@@ -226,6 +226,58 @@
     color: var(--st-text-muted);
 }
 
+    /* Settings panel fixes */
+    .stats-settings,
+    .stats-settings .inline-drawer,
+    .stats-settings .stats-drawer {
+        width: 100%;
+    }
+
+    .stats-settings .stats-drawer {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .stats-settings .menu_button {
+        width: 100%;
+        min-width: 180px;
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    .stats-settings .stats-setting-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .stats-settings .stats-setting-label {
+        color: var(--st-text-muted);
+        font-size: 0.9em;
+    }
+
+    .stats-settings .stats-input {
+        width: 110px;
+        padding: 4px 6px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(0, 0, 0, 0.35);
+        color: var(--st-text-color);
+    }
+
+    .stats-settings .stats-small-button {
+        width: auto;
+        min-width: 120px;
+    }
+
+    .stats-setting-divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.08);
+        margin: 6px 0;
+    }
+
 .stats-date-input {
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.12);
