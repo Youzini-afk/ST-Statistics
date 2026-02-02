@@ -146,7 +146,8 @@ export function initCharts(stats, themeKey = 'violet') {
                         borderWidth: 1,
                         barPercentage: 0.8,
                         categoryPercentage: 0.9,
-                        borderRadius: 2
+                        borderRadius: 2,
+                        maxBarThickness: 50
                     }]
                 },
                 options: {
@@ -464,7 +465,8 @@ export function initCharts(stats, themeKey = 'violet') {
                         backgroundColor: `rgba(${colorRGB}, 0.6)`,
                         borderColor: `rgba(${colorRGB}, 1)`,
                         borderWidth: 1,
-                        borderRadius: 2
+                        borderRadius: 2,
+                        maxBarThickness: 50
                     }]
                 },
                 options: {
