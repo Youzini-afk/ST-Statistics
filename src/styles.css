@@ -1,0 +1,359 @@
+:root {
+    --st-primary: #8b5cf6; /* Violet-500 */
+    --st-primary-glow: rgba(139, 92, 246, 0.4);
+    --st-bg-color: rgba(20, 21, 25, 0.85);
+    --st-card-bg: rgba(255, 255, 255, 0.05);
+    --st-card-border: rgba(255, 255, 255, 0.08);
+    --st-text-color: #f3f4f6;
+    --st-text-muted: #9ca3af;
+    --st-heatmap-level-1: rgba(139, 92, 246, 0.3);
+    --st-heatmap-level-2: rgba(139, 92, 246, 0.5);
+    --st-heatmap-level-3: rgba(139, 92, 246, 0.7);
+    --st-heatmap-level-4: rgba(139, 92, 246, 0.9);
+}
+
+/* 全屏覆盖层 (Overlay) */
+#stats-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 2147483647 !important;
+    background-color: rgba(5, 5, 8, 0.8); 
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px; 
+    animation: fade-in 0.3s ease-out;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: var(--st-text-color);
+}
+
+@keyframes fade-in {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* 主面板 */
+.stats-dashboard {
+    background: var(--st-bg-color);
+    border: 1px solid var(--st-card-border);
+    border-radius: 24px;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    padding: 40px;
+    max-width: 1200px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    backdrop-filter: blur(20px);
+}
+
+/* 头部区域 */
+.stats-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; 
+    margin-right: 0;
+    border-bottom: 1px solid var(--st-card-border);
+    padding-bottom: 20px;
+    margin-bottom: 10px;
+}
+
+.stats-header-row h3 {
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #fff;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    background: linear-gradient(135deg, #fff 0%, #c4b5fd 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.stats-header-row small {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    color: var(--st-text-muted);
+    font-size: 0.9em;
+    background: rgba(0,0,0,0.2);
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin: 0 !important;
+}
+
+/* 按钮工具栏 */
+.stats-actions {
+    position: static;
+    display: flex;
+    gap: 12px;
+    margin-left: auto;
+}
+
+.stats-btn {
+    background: var(--st-card-bg);
+    border: 1px solid var(--st-card-border);
+    border-radius: 10px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--st-text-muted);
+}
+
+.stats-btn:hover {
+    background: rgba(139, 92, 246, 0.15);
+    border-color: var(--st-primary);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+}
+
+/* 通用卡片样式 */
+.stats-card {
+    background-color: var(--st-card-bg);
+    border: 1px solid var(--st-card-border);
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+/* 卡片头部 */
+.card-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.card-header-row h4 {
+    margin: 0;
+    font-weight: 600;
+    color: var(--st-text-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.1em;
+}
+
+.card-toggle-btn {
+    cursor: pointer;
+    color: var(--st-text-muted);
+    transition: color 0.2s ease, transform 0.2s ease;
+    padding: 5px;
+}
+
+.card-toggle-btn:hover {
+    color: var(--st-primary);
+    transform: rotate(90deg);
+}
+
+/* 指标网格 */
+.stats-metrics-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.metric-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 25px;
+    gap: 10px;
+    background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+}
+
+.metric-value {
+    font-size: 2.5em;
+    font-weight: 800;
+    color: var(--st-primary);
+    text-shadow: 0 0 20px var(--st-primary-glow);
+    font-family: 'Inter', sans-serif;
+    letter-spacing: -1px;
+}
+
+.metric-label {
+    font-size: 0.85em;
+    color: var(--st-text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+}
+
+/* 热力图 */
+.heatmap-grid {
+    display: grid;
+    grid-template-columns: repeat(53, minmax(0, 1fr));
+    gap: 4px;
+    min-width: 700px;
+}
+
+.heatmap-cell {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: rgba(255, 255, 255, 0.03); 
+}
+
+.heatmap-cell:hover {
+    transform: scale(1.3);
+    box-shadow: 0 0 12px var(--st-primary-glow);
+    z-index: 10;
+}
+
+.heatmap-cell.active {
+    border: 2px solid #fff !important;
+    transform: scale(1.2);
+}
+
+.heatmap-level-0 { background-color: rgba(255, 255, 255, 0.03); }
+.heatmap-level-1 { background-color: var(--st-heatmap-level-1); }
+.heatmap-level-2 { background-color: var(--st-heatmap-level-2); }
+.heatmap-level-3 { background-color: var(--st-heatmap-level-3); }
+.heatmap-level-4 { background-color: var(--st-heatmap-level-4); }
+
+.heatmap-scroll-wrapper {
+    overflow-x: auto;
+    padding-bottom: 10px;
+    scrollbar-color: var(--st-card-border) transparent;
+    scrollbar-width: thin;
+}
+
+.heatmap-scroll-wrapper::-webkit-scrollbar {
+    height: 6px;
+}
+
+.heatmap-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: var(--st-card-border);
+    border-radius: 3px;
+}
+
+#heatmap-details-panel {
+    margin-top: 20px;
+    padding: 16px 20px;
+    background-color: var(--st-card-bg);
+    border: 1px solid var(--st-card-border);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    font-size: 0.9em;
+    color: var(--st-text-color);
+}
+
+.heatmap-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.heatmap-detail-icon {
+    color: var(--st-primary);
+    filter: drop-shadow(0 0 5px var(--st-primary-glow));
+}
+
+/* 24小时活动图 */
+.hourly-cell {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 2px;
+}
+
+.hourly-cell:hover {
+    transform: scaleY(1.1);
+    z-index: 5;
+    box-shadow: 0 0 8px var(--st-primary-glow);
+}
+
+/* 模型列表 */
+.model-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.model-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 18px;
+    background-color: rgba(255, 255, 255, 0.02);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-size: 0.95em;
+    transition: all 0.2s;
+    color: var(--st-text-color);
+}
+
+.model-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: var(--st-card-border);
+    transform: translateX(4px);
+}
+
+.model-item span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 70%;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .stats-dashboard {
+        padding: 15px;
+    }
+
+    .stats-metrics-row {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px;
+    }
+
+    .metric-item {
+        padding: 15px 10px;
+    }
+
+    .metric-value {
+        font-size: 1.5em;
+    }
+
+    .stats-header-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .stats-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
