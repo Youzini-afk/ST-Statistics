@@ -111,6 +111,13 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
             const dateBoundsFromCache = cachedEntry.dateBounds || null;
             cachedStats.__meta = { dateRange: dateRangeFromCache, dateBounds: dateBoundsFromCache };
         }
+        // Ensure new fields exist for old cached data
+        if (!cachedStats.dailyDuration) {
+            cachedStats.dailyDuration = {};
+        }
+        if (cachedStats.overview && cachedStats.overview.totalDurationMinutes === undefined) {
+            cachedStats.overview.totalDurationMinutes = 0;
+        }
         const dashboardHTML = generateDashboardHTML(cachedStats, isGlobalMode ? null : character, isGlobalMode, settings.theme);
         showOverlay(dashboardHTML, settings.theme);
         // Initialize charts for cached data
