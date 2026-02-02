@@ -403,7 +403,7 @@ export function generateDashboardHTML(stats, character, isGlobalMode = false) {
                 <!-- Hourly Heatmap -->
                 <div class="stats-card">
                     <div class="card-header-row">
-                        <h4><i class="fa-solid fa-clock"></i> 24小时作息分布</h4>
+                        <h4><i class="fa-solid fa-clock"></i> 24小时分布</h4>
                         <i class="fa-solid fa-chevron-up card-toggle-btn"></i>
                     </div>
                     <div class="card-content">
