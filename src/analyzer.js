@@ -207,6 +207,8 @@ export function analyzeChats(chatsData, options = {}) {
             ratio: userMessages > 0 ? (aiMessages / userMessages).toFixed(2) : 0,
             firstDate: firstDate ? firstDate.toLocaleDateString() : 'N/A',
             lastDate: lastDate ? lastDate.toLocaleDateString() : 'N/A',
+            firstDateISO: firstDate ? firstDate.toISOString().split('T')[0] : null,
+            lastDateISO: lastDate ? lastDate.toISOString().split('T')[0] : null,
             daysActive: firstDate && lastDate ? Math.ceil((lastDate - firstDate) / (1000 * 60 * 60 * 24)) : 0,
             totalDurationMinutes
         },

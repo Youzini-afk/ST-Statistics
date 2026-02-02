@@ -82,11 +82,11 @@ export function initCharts(stats, themeKey = 'violet') {
 
     // 1. Timeline Chart (Bar Chart for Daily Activity)
     const ctxTimeline = document.getElementById('timelineChart');
-    if (ctxTimeline && stats.overview.firstDate && stats.overview.firstDate !== 'N/A') {
-        const firstDateObj = new Date(stats.overview.firstDate);
+    if (ctxTimeline && stats.overview.firstDateISO) {
+        const firstDateObj = new Date(stats.overview.firstDateISO);
         if (!isNaN(firstDateObj.getTime())) {
             const dates = [];
-            let currentDate = firstDateObj;
+            let currentDate = new Date(firstDateObj);
             const endDate = new Date(); // Today
             
             let safety = 0;
@@ -391,10 +391,9 @@ export function initCharts(stats, themeKey = 'violet') {
     // 6. Daily Duration Bar Chart
     const ctxDailyDuration = document.getElementById('dailyDurationChart');
     if (ctxDailyDuration && stats.dailyDuration) {
-        // Generate all dates from first to last
-        const firstDateObj = stats.overview.firstDate && stats.overview.firstDate !== 'N/A' 
-            ? new Date(stats.overview.firstDate) 
-            : null;
+        // Generate all dates from first to last using ISO format
+        const firstDateISO = stats.overview.firstDateISO;
+        const firstDateObj = firstDateISO ? new Date(firstDateISO) : null;
         
         if (firstDateObj && !isNaN(firstDateObj.getTime())) {
             const dates = [];
