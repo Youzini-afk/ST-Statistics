@@ -76,6 +76,14 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
 
     const reportTitle = isGlobalMode ? '全部角色统计' : character.name;
 
+    const saveSettingsNow = () => {
+        if (globalThis.SillyTavern.saveSettings) {
+            globalThis.SillyTavern.saveSettings();
+        } else if (globalThis.SillyTavern.saveSettingsDebounced) {
+            globalThis.SillyTavern.saveSettingsDebounced();
+        }
+    };
+
     // Helper to setup events with correct context
     const bindEvents = (statsToUse) => {
         setupDashboardEvents((force, range, newTheme) => {
@@ -106,6 +114,13 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
 
     // Check cache
     let cachedEntry = (!forceRefresh && settings.cache) ? settings.cache[cacheKey] : null;
+    if (!forceRefresh && settings.cache && !cachedEntry && settings.cacheIndex && settings.cacheIndex[baseCacheKey]) {
+        const indexedKey = settings.cacheIndex[baseCacheKey];
+        if (settings.cache[indexedKey]) {
+            cachedEntry = settings.cache[indexedKey];
+            cacheKey = indexedKey;
+        }
+    }
     if (!forceRefresh && settings.cache && !cachedEntry) {
         const candidateKeys = Object.keys(settings.cache).filter(key => key === baseCacheKey || key.startsWith(`${baseCacheKey}__`));
         if (candidateKeys.length > 0) {
@@ -143,9 +158,7 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
     if (forceRefresh && settings.cache && settings.cache[cacheKey]) {
         logger.log(`Clearing cache for ${reportTitle}`);
         delete settings.cache[cacheKey];
-        if (globalThis.SillyTavern.saveSettingsDebounced) {
-            globalThis.SillyTavern.saveSettingsDebounced();
-        }
+        saveSettingsNow();
     }
 
     // Show loading overlay
@@ -270,11 +283,13 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
             settings.cache = {};
         }
         settings.cache[cacheKey] = { stats, dateRange: normalizedRange, dateBounds, updatedAt: Date.now() };
+        if (!settings.cacheIndex) {
+            settings.cacheIndex = {};
+        }
+        settings.cacheIndex[baseCacheKey] = cacheKey;
         
         // Save settings
-        if (globalThis.SillyTavern.saveSettingsDebounced) {
-            globalThis.SillyTavern.saveSettingsDebounced();
-        }
+        saveSettingsNow();
 
         // Display dashboard
         const dashboardHTML = generateDashboardHTML(stats, isGlobalMode ? null : character, isGlobalMode, settings.theme);
