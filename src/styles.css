@@ -12,6 +12,14 @@
     --st-heatmap-level-2: rgba(139, 92, 246, 0.5);
     --st-heatmap-level-3: rgba(139, 92, 246, 0.7);
     --st-heatmap-level-4: rgba(139, 92, 246, 0.9);
+    
+    /* Stats Colors */
+    --st-stat-user: #60a5fa;
+    --st-stat-ai: #c084fc;
+    --st-stat-user-bg: rgba(96, 165, 250, 0.1);
+    --st-stat-user-border: rgba(96, 165, 250, 0.3);
+    --st-stat-ai-bg: rgba(192, 132, 252, 0.1);
+    --st-stat-ai-border: rgba(192, 132, 252, 0.3);
 }
 
 /* Theme: Violet (Default) */
@@ -24,6 +32,13 @@
     --st-heatmap-level-2: rgba(139, 92, 246, 0.5);
     --st-heatmap-level-3: rgba(139, 92, 246, 0.7);
     --st-heatmap-level-4: rgba(139, 92, 246, 0.9);
+
+    --st-stat-user: #60a5fa;
+    --st-stat-ai: #c084fc;
+    --st-stat-user-bg: rgba(96, 165, 250, 0.1);
+    --st-stat-user-border: rgba(96, 165, 250, 0.3);
+    --st-stat-ai-bg: rgba(192, 132, 252, 0.1);
+    --st-stat-ai-border: rgba(192, 132, 252, 0.3);
 }
 
 /* Theme: Blue (Ocean) */
@@ -36,6 +51,13 @@
     --st-heatmap-level-2: rgba(59, 130, 246, 0.5);
     --st-heatmap-level-3: rgba(59, 130, 246, 0.7);
     --st-heatmap-level-4: rgba(59, 130, 246, 0.9);
+
+    --st-stat-user: #38bdf8;
+    --st-stat-ai: #60a5fa;
+    --st-stat-user-bg: rgba(56, 189, 248, 0.1);
+    --st-stat-user-border: rgba(56, 189, 248, 0.3);
+    --st-stat-ai-bg: rgba(96, 165, 250, 0.1);
+    --st-stat-ai-border: rgba(96, 165, 250, 0.3);
 }
 
 /* Theme: Emerald (Nature) */
@@ -48,6 +70,13 @@
     --st-heatmap-level-2: rgba(16, 185, 129, 0.5);
     --st-heatmap-level-3: rgba(16, 185, 129, 0.7);
     --st-heatmap-level-4: rgba(16, 185, 129, 0.9);
+
+    --st-stat-user: #34d399;
+    --st-stat-ai: #10b981;
+    --st-stat-user-bg: rgba(52, 211, 153, 0.1);
+    --st-stat-user-border: rgba(52, 211, 153, 0.3);
+    --st-stat-ai-bg: rgba(16, 185, 129, 0.1);
+    --st-stat-ai-border: rgba(16, 185, 129, 0.3);
 }
 
 /* Theme: Amber (Sunset) */
@@ -60,6 +89,13 @@
     --st-heatmap-level-2: rgba(245, 158, 11, 0.5);
     --st-heatmap-level-3: rgba(245, 158, 11, 0.7);
     --st-heatmap-level-4: rgba(245, 158, 11, 0.9);
+
+    --st-stat-user: #fbbf24;
+    --st-stat-ai: #f59e0b;
+    --st-stat-user-bg: rgba(251, 191, 36, 0.1);
+    --st-stat-user-border: rgba(251, 191, 36, 0.3);
+    --st-stat-ai-bg: rgba(245, 158, 11, 0.1);
+    --st-stat-ai-border: rgba(245, 158, 11, 0.3);
 }
 
 /* Theme: Rose (Passion) */
@@ -72,6 +108,13 @@
     --st-heatmap-level-2: rgba(244, 63, 94, 0.5);
     --st-heatmap-level-3: rgba(244, 63, 94, 0.7);
     --st-heatmap-level-4: rgba(244, 63, 94, 0.9);
+
+    --st-stat-user: #fb7185;
+    --st-stat-ai: #f43f5e;
+    --st-stat-user-bg: rgba(251, 113, 133, 0.1);
+    --st-stat-user-border: rgba(251, 113, 133, 0.3);
+    --st-stat-ai-bg: rgba(244, 63, 94, 0.1);
+    --st-stat-ai-border: rgba(244, 63, 94, 0.3);
 }
 
 /* 全屏覆盖层 (Overlay) */
@@ -450,6 +493,27 @@
     white-space: nowrap;
     max-width: 70%;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* 动态统计卡片颜色 */
+.stat-user .metric-value {
+    color: var(--st-stat-user) !important;
+}
+
+.stat-ai .metric-value {
+    color: var(--st-stat-ai) !important;
+}
+
+.stat-card-user {
+    background: var(--st-stat-user-bg) !important;
+    border-color: var(--st-stat-user-border) !important;
+    color: var(--st-stat-user) !important;
+}
+
+.stat-card-ai {
+    background: var(--st-stat-ai-bg) !important;
+    border-color: var(--st-stat-ai-border) !important;
+    color: var(--st-stat-ai) !important;
 }
 
 /* 响应式设计 */

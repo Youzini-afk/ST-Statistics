@@ -392,39 +392,39 @@ export function generateDashboardHTML(stats, character, isGlobalMode = false, th
             <!-- Key Metrics Grid: 2 rows x 4 columns -->
             <div class="stats-metrics-row" style="grid-template-columns: repeat(4, 1fr);">
                 <!-- Row 1: User Stats -->
-                <div class="stats-card metric-item">
-                    <span class="metric-value" style="color: #60a5fa;">${formatNumber(stats.overview.userMessages)}</span>
+                <div class="stats-card metric-item stat-user">
+                    <span class="metric-value">${formatNumber(stats.overview.userMessages)}</span>
                     <span class="metric-label">用户消息数</span>
                 </div>
-                <div class="stats-card metric-item">
-                    <span class="metric-value" style="color: #60a5fa;">${formatNumber(stats.overview.userCharCount)}</span>
+                <div class="stats-card metric-item stat-user">
+                    <span class="metric-value">${formatNumber(stats.overview.userCharCount)}</span>
                     <span class="metric-label">用户输入字数</span>
                 </div>
-                <div class="stats-card metric-item">
-                    <span class="metric-value" style="color: #38bdf8;">${formatNumber(stats.tokens.user)}</span>
+                <div class="stats-card metric-item stat-user">
+                    <span class="metric-value">${formatNumber(stats.tokens.user)}</span>
                     <span class="metric-label">用户输入 Token</span>
                 </div>
-                <div class="stats-card metric-item" style="background: rgba(96, 165, 250, 0.1); border-color: rgba(96, 165, 250, 0.3);">
-                    <span class="metric-value" style="font-size: 2.4em; color: #93c5fd;">${formatNumber(stats.overview.totalMessages)}</span>
-                    <span class="metric-label" style="color: #bfdbfe;">总消息数</span>
+                <div class="stats-card metric-item stat-card-user stat-user">
+                    <span class="metric-value" style="font-size: 2.4em;">${formatNumber(stats.overview.totalMessages)}</span>
+                    <span class="metric-label" style="opacity: 0.8; color: inherit;">总消息数</span>
                 </div>
 
                 <!-- Row 2: AI Stats -->
-                <div class="stats-card metric-item">
-                    <span class="metric-value" style="color: #c084fc;">${formatNumber(stats.overview.aiMessages)}</span>
+                <div class="stats-card metric-item stat-ai">
+                    <span class="metric-value">${formatNumber(stats.overview.aiMessages)}</span>
                     <span class="metric-label">AI 消息数</span>
                 </div>
-                <div class="stats-card metric-item">
-                    <span class="metric-value" style="color: #c084fc;">${formatNumber(stats.overview.aiCharCount)}</span>
+                <div class="stats-card metric-item stat-ai">
+                    <span class="metric-value">${formatNumber(stats.overview.aiCharCount)}</span>
                     <span class="metric-label">AI 输出字数</span>
                 </div>
-                <div class="stats-card metric-item">
-                    <span class="metric-value" style="color: #e879f9;">${formatNumber(stats.tokens.ai)}</span>
+                <div class="stats-card metric-item stat-ai">
+                    <span class="metric-value">${formatNumber(stats.tokens.ai)}</span>
                     <span class="metric-label">AI 输出 Token</span>
                 </div>
-                <div class="stats-card metric-item" style="background: rgba(192, 132, 252, 0.1); border-color: rgba(192, 132, 252, 0.3);">
-                    <span class="metric-value" style="font-size: 2.4em; color: #d8b4fe;">${stats.overview.ratio}x</span>
-                    <span class="metric-label" style="color: #e9d5ff;">AI/用户比</span>
+                <div class="stats-card metric-item stat-card-ai stat-ai">
+                    <span class="metric-value" style="font-size: 2.4em;">${stats.overview.ratio}x</span>
+                    <span class="metric-label" style="opacity: 0.8; color: inherit;">AI/用户比</span>
                 </div>
             </div>
 
