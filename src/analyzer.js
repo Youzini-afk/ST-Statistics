@@ -48,6 +48,21 @@ export function parseDate(dateString) {
     return null;
 }
 
+export function formatLocalDateKey(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function parseLocalDateKey(dateKey) {
+    if (!dateKey) return null;
+    const parts = String(dateKey).split('-').map((p) => Number(p));
+    if (parts.length !== 3 || parts.some((p) => !Number.isFinite(p))) return null;
+    const [year, month, day] = parts;
+    return new Date(year, month - 1, day);
+}
+
 /**
  * Estimate token count from text
  * Uses different ratios for CJK (Chinese, Japanese, Korean) vs Latin text
@@ -74,8 +89,11 @@ function estimateTokenCount(text) {
  */
 export function analyzeChats(chatsData, options = {}) {
     const { startDate, endDate } = options;
-    const start = startDate ? new Date(`${startDate}T00:00:00`) : null;
-    const end = endDate ? new Date(`${endDate}T23:59:59.999`) : null;
+    const start = startDate ? parseLocalDateKey(startDate) : null;
+    const end = endDate ? parseLocalDateKey(endDate) : null;
+    if (end) {
+        end.setHours(23, 59, 59, 999);
+    }
     const hasRange = !!(start || end);
 
     let totalMessages = 0;
@@ -115,7 +133,7 @@ export function analyzeChats(chatsData, options = {}) {
                 if (!firstDate || date < firstDate) firstDate = date;
                 if (!lastDate || date > lastDate) lastDate = date;
 
-                const dateKey = date.toISOString().split('T')[0];
+                const dateKey = formatLocalDateKey(date);
                 dailyActivity[dateKey] = (dailyActivity[dateKey] || 0) + 1;
 
                 if (!dailyFileCounts[dateKey]) {
@@ -200,7 +218,7 @@ export function analyzeChats(chatsData, options = {}) {
             const inRange = !hasRange || ((!start || date >= start) && (!end || date <= end));
             if (!inRange) return;
             
-            const dateKey = date.toISOString().split('T')[0];
+            const dateKey = formatLocalDateKey(date);
             if (!dailyMessages[dateKey]) {
                 dailyMessages[dateKey] = [];
             }
@@ -252,6 +270,10 @@ export function analyzeChats(chatsData, options = {}) {
     }
 
     const avgMessagesPerChat = totalChats > 0 ? Math.round(totalMessages / totalChats) : 0;
+    const dayMs = 24 * 60 * 60 * 1000;
+    const firstDay = firstDate ? new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate()) : null;
+    const lastDay = lastDate ? new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate()) : null;
+    const daysActive = firstDay && lastDay ? Math.floor((lastDay - firstDay) / dayMs) + 1 : 0;
 
     // Calculate total duration in minutes
     const totalDurationMinutes = Object.values(dailyDuration).reduce((sum, mins) => sum + mins, 0);
@@ -268,9 +290,9 @@ export function analyzeChats(chatsData, options = {}) {
             ratio: userMessages > 0 ? (aiMessages / userMessages).toFixed(2) : 0,
             firstDate: firstDate ? firstDate.toLocaleDateString() : 'N/A',
             lastDate: lastDate ? lastDate.toLocaleDateString() : 'N/A',
-            firstDateISO: firstDate ? firstDate.toISOString().split('T')[0] : null,
-            lastDateISO: lastDate ? lastDate.toISOString().split('T')[0] : null,
-            daysActive: firstDate && lastDate ? Math.ceil((lastDate - firstDate) / (1000 * 60 * 60 * 24)) : 0,
+            firstDateISO: firstDate ? formatLocalDateKey(firstDate) : null,
+            lastDateISO: lastDate ? formatLocalDateKey(lastDate) : null,
+            daysActive,
             totalDurationMinutes
         },
         tokens: {

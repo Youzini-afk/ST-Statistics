@@ -15,7 +15,7 @@
     "analytics"
   ],
   "author": "Your Name",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "devDependencies": {
     "@babel/core": "^7.23.0",
     "@babel/preset-env": "^7.23.0",
@@ -27,7 +27,6 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
-    "chart.js": "^4.5.1",
-    "segmentit": "^2.0.3"
+    "chart.js": "^4.5.1"
   }
 }

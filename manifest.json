@@ -3,7 +3,7 @@
   "display_name": "ST-Statistics",
   "author": "Youzini",
   "description": "分析聊天记录，为您的角色提供详细的统计数据、热力图和活动报告。",
-  "version": "1.2.1",
+  "version": "1.2.7",
   "js": "dist/index.js",
   "requires": []
 }

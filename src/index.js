@@ -6,46 +6,69 @@ import './styles.css';
 import { Logger } from './logger.js';
 import { CONFIG } from './config.js';
 import { fetchAllChats, fetchAllCharactersChats } from './api.js';
-import { analyzeChats, parseDate } from './analyzer.js';
+import { analyzeChats, parseDate, formatLocalDateKey } from './analyzer.js';
 import { showOverlay, generateDashboardHTML, setupDashboardEvents, closeOverlay, initCharts, THEMES } from './ui.js';
 
 const logger = new Logger('Stats');
 
-// Get extension settings
-const { extensionSettings } = globalThis.SillyTavern.getContext();
 const EXTENSION_NAME = CONFIG.EXTENSION_NAME;
+let settings = null;
 
-// Initialize settings
-if (!extensionSettings[EXTENSION_NAME]) {
-    logger.log('Initializing default settings for the first time.');
-    extensionSettings[EXTENSION_NAME] = structuredClone(CONFIG.DEFAULT_SETTINGS);
+function getContextSafe() {
+    if (!globalThis.SillyTavern?.getContext) return null;
+    return globalThis.SillyTavern.getContext();
 }
 
-const settings = extensionSettings[EXTENSION_NAME];
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function ensureSettings() {
+    if (settings) return settings;
+    const context = getContextSafe();
+    if (!context) {
+        throw new Error('SillyTavern context not available');
+    }
+
+    const { extensionSettings } = context;
+    if (!extensionSettings[EXTENSION_NAME]) {
+        logger.log('Initializing default settings for the first time.');
+        extensionSettings[EXTENSION_NAME] = structuredClone(CONFIG.DEFAULT_SETTINGS);
+    }
+
+    settings = extensionSettings[EXTENSION_NAME];
+
+    // Ensure default theme is set (for existing users)
+    if (!settings.theme) {
+        settings.theme = CONFIG.DEFAULT_SETTINGS.theme || 'violet';
+    }
+
+    // Ensure cache cleanup settings are set (for existing users)
+    if (settings.cacheCleanupEnabled === undefined) {
+        settings.cacheCleanupEnabled = CONFIG.DEFAULT_SETTINGS.cacheCleanupEnabled;
+    }
+    if (!Number.isFinite(settings.cacheCleanupDays)) {
+        settings.cacheCleanupDays = CONFIG.DEFAULT_SETTINGS.cacheCleanupDays;
+    }
+
+    return settings;
+}
 
 const CACHE_BACKUP_KEY = 'ST_Stats_CacheBackup';
-
-// Ensure default theme is set (for existing users)
-if (!settings.theme) {
-    settings.theme = CONFIG.DEFAULT_SETTINGS.theme || 'violet';
-}
-
-// Ensure cache cleanup settings are set (for existing users)
-if (settings.cacheCleanupEnabled === undefined) {
-    settings.cacheCleanupEnabled = CONFIG.DEFAULT_SETTINGS.cacheCleanupEnabled;
-}
-if (!Number.isFinite(settings.cacheCleanupDays)) {
-    settings.cacheCleanupDays = CONFIG.DEFAULT_SETTINGS.cacheCleanupDays;
-}
 
 // Save settings helper (prefer immediate save)
 function saveSettingsNow() {
     try {
-        const ctx = globalThis.SillyTavern.getContext();
-        if (typeof ctx.saveSettings === 'function') {
+        const ctx = getContextSafe();
+        if (ctx && typeof ctx.saveSettings === 'function') {
             ctx.saveSettings();
             logger.log('Settings saved immediately via context.saveSettings');
-        } else if (typeof ctx.saveSettingsDebounced === 'function') {
+        } else if (ctx && typeof ctx.saveSettingsDebounced === 'function') {
             ctx.saveSettingsDebounced();
             logger.log('Settings saved via context.saveSettingsDebounced');
         } else if (typeof globalThis.saveSettings === 'function') {
@@ -71,6 +94,13 @@ let currentAbortController = null;
  * @param {boolean} globalMode - Generate global stats for all characters
  */
 async function generateReport(forceRefresh = false, globalMode = false, dateRange = null) {
+    try {
+        ensureSettings();
+    } catch (error) {
+        logger.error('Settings unavailable:', error);
+        toastr.error('统计扩展尚未就绪。', 'Stats');
+        return;
+    }
     // Cancel any existing operation
     if (currentAbortController) {
         currentAbortController.abort();
@@ -78,7 +108,11 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
     currentAbortController = new AbortController();
     const abortSignal = currentAbortController.signal;
 
-    const context = globalThis.SillyTavern.getContext();
+    const context = getContextSafe();
+    if (!context) {
+        toastr.error('无法获取上下文信息。', 'Stats');
+        return;
+    }
     const characterId = context.characterId;
 
     // Determine mode: if no character selected, use global mode
@@ -109,6 +143,7 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
     cacheKey = `${baseCacheKey}${rangeKey}`;
 
     const reportTitle = isGlobalMode ? '全部角色统计' : character.name;
+    const reportTitleSafe = escapeHtml(reportTitle);
 
     // Save to localStorage as backup
     const saveToLocalStorage = (cacheData) => {
@@ -263,7 +298,7 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
                     <i class="fa-solid fa-xmark"></i>
                 </div>
             </div>
-            <h3><i class="fa-solid fa-chart-simple"></i> 正在分析: ${reportTitle}</h3>
+            <h3><i class="fa-solid fa-chart-simple"></i> 正在分析: ${reportTitleSafe}</h3>
             <div id="stats-progress-area" style="text-align: center; width: 100%; max-width: 600px;">
                 <p id="stats-status-text" style="margin-bottom: 10px;">正在扫描聊天记录...</p>
                 <progress id="stats-progress-bar" value="0" max="100" style="width: 100%; height: 20px;"></progress>
@@ -273,7 +308,7 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
     `, settings.theme);
 
     // Setup cancel button for loading screen
-    $('.close-btn').off('click').on('click', () => {
+    $('#stats-overlay').off('click', '.close-btn').on('click', '.close-btn', () => {
         if (currentAbortController) {
             currentAbortController.abort();
             currentAbortController = null;
@@ -331,6 +366,9 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
                     </div>
                 </div>
             `);
+            setupDashboardEvents((force, range) => {
+                generateReport(force, isGlobalMode, range);
+            });
             return;
         }
 
@@ -347,8 +385,8 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
         });
 
         const dateBounds = {
-            min: minDate ? minDate.toISOString().split('T')[0] : '',
-            max: maxDate ? maxDate.toISOString().split('T')[0] : ''
+            min: minDate ? formatLocalDateKey(minDate) : '',
+            max: maxDate ? formatLocalDateKey(maxDate) : ''
         };
 
         const normalizedRange = {
@@ -397,6 +435,7 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
 
     } catch (error) {
         logger.error('Report generation failed:', error);
+        const errorMessage = escapeHtml(error?.message || 'Unknown error');
         $('#stats-content-wrapper').html(`
             <div class="stats-dashboard" style="justify-content: center; align-items: center; min-height: 200px;">
                 <div class="stats-actions">
@@ -412,10 +451,13 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
                 </div>
                 <div style="text-align: center;">
                     <i class="fa-solid fa-triangle-exclamation fa-3x" style="color: #ff0000; margin-bottom: 15px;"></i>
-                    <p style="color:red;">生成报告失败: ${error.message}</p>
+                    <p style="color:red;">生成报告失败: ${errorMessage}</p>
                 </div>
             </div>
         `);
+        setupDashboardEvents((force, range) => {
+            generateReport(force, isGlobalMode, range);
+        });
     }
 }
 
@@ -449,6 +491,7 @@ function addWandMenuButton() {
 }
 
 function cleanupCache(days) {
+    ensureSettings();
     if (!settings.cache) return 0;
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
     let removed = 0;
@@ -475,6 +518,7 @@ function cleanupCache(days) {
 }
 
 function cleanupLocalStorageBackup(days) {
+    ensureSettings();
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
     let removed = 0;
 
@@ -508,6 +552,7 @@ function cleanupLocalStorageBackup(days) {
 }
 
 function runCacheCleanup(days, reason = 'manual') {
+    ensureSettings();
     const safeDays = Math.max(1, Math.floor(Number(days) || CONFIG.DEFAULT_SETTINGS.cacheCleanupDays));
     const removedCache = cleanupCache(safeDays);
     const removedBackup = cleanupLocalStorageBackup(safeDays);
@@ -524,6 +569,7 @@ function runCacheCleanup(days, reason = 'manual') {
  * Add settings panel
  */
 function addSettingsPanel() {
+    ensureSettings();
     const panelHTML = `
         <div class="stats-settings">
             <div class="inline-drawer">
@@ -610,6 +656,8 @@ jQuery(async () => {
                 }
             }, 100);
         });
+
+        ensureSettings();
 
         // Add UI elements
         addSettingsPanel();

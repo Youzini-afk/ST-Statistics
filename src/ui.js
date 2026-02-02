@@ -19,6 +19,30 @@ export const THEMES = {
 
 const THEME_ORDER = ['violet', 'blue', 'emerald', 'amber', 'rose'];
 
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function formatLocalDateKey(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function parseLocalDateKey(dateKey) {
+    if (!dateKey) return null;
+    const parts = String(dateKey).split('-').map((p) => Number(p));
+    if (parts.length !== 3 || parts.some((p) => !Number.isFinite(p))) return null;
+    const [year, month, day] = parts;
+    return new Date(year, month - 1, day);
+}
+
 /**
  * Cleanup existing charts
  */
@@ -79,25 +103,31 @@ export function initCharts(stats, themeKey = 'violet') {
     const theme = THEMES[themeKey] || THEMES.violet;
     const colorRGB = theme.color;
     const colorHex = theme.hex;
+    const range = stats.__meta?.dateRange || null;
 
     // 1. Timeline Chart (Bar Chart for Daily Activity)
     const ctxTimeline = document.getElementById('timelineChart');
     // Try ISO format first, fall back to dailyActivity keys
-    let firstDateStr = stats.overview.firstDateISO;
+    let firstDateStr = range?.start || stats.overview.firstDateISO;
     if (!firstDateStr && stats.dailyActivity) {
         const sortedDates = Object.keys(stats.dailyActivity).sort();
         if (sortedDates.length > 0) firstDateStr = sortedDates[0];
     }
-    if (ctxTimeline && firstDateStr) {
-        const firstDateObj = new Date(firstDateStr);
-        if (!isNaN(firstDateObj.getTime())) {
+    let lastDateStr = range?.end || stats.overview.lastDateISO;
+    if (!lastDateStr && stats.dailyActivity) {
+        const sortedDates = Object.keys(stats.dailyActivity).sort();
+        if (sortedDates.length > 0) lastDateStr = sortedDates[sortedDates.length - 1];
+    }
+    if (ctxTimeline && firstDateStr && lastDateStr) {
+        const firstDateObj = parseLocalDateKey(firstDateStr);
+        const endDate = parseLocalDateKey(lastDateStr);
+        if (firstDateObj && endDate && !isNaN(firstDateObj.getTime()) && !isNaN(endDate.getTime())) {
             const dates = [];
             let currentDate = new Date(firstDateObj);
-            const endDate = new Date(); // Today
             
             let safety = 0;
             while (currentDate <= endDate && safety < 10000) {
-                dates.push(currentDate.toISOString().split('T')[0]);
+                dates.push(formatLocalDateKey(currentDate));
                 currentDate.setDate(currentDate.getDate() + 1);
                 safety++;
             }
@@ -398,21 +428,26 @@ export function initCharts(stats, themeKey = 'violet') {
     const ctxDailyDuration = document.getElementById('dailyDurationChart');
     if (ctxDailyDuration && stats.dailyDuration) {
         // Generate all dates from first to last using ISO format, fall back to dailyDuration keys
-        let durationFirstDateStr = stats.overview.firstDateISO;
+        let durationFirstDateStr = range?.start || stats.overview.firstDateISO;
         if (!durationFirstDateStr && stats.dailyDuration) {
             const sortedDates = Object.keys(stats.dailyDuration).sort();
             if (sortedDates.length > 0) durationFirstDateStr = sortedDates[0];
         }
-        const firstDateObj = durationFirstDateStr ? new Date(durationFirstDateStr) : null;
+        let durationLastDateStr = range?.end || stats.overview.lastDateISO;
+        if (!durationLastDateStr && stats.dailyDuration) {
+            const sortedDates = Object.keys(stats.dailyDuration).sort();
+            if (sortedDates.length > 0) durationLastDateStr = sortedDates[sortedDates.length - 1];
+        }
+        const firstDateObj = durationFirstDateStr ? parseLocalDateKey(durationFirstDateStr) : null;
+        const endDate = durationLastDateStr ? parseLocalDateKey(durationLastDateStr) : null;
         
-        if (firstDateObj && !isNaN(firstDateObj.getTime())) {
+        if (firstDateObj && endDate && !isNaN(firstDateObj.getTime()) && !isNaN(endDate.getTime())) {
             const dates = [];
             let currentDate = new Date(firstDateObj);
-            const endDate = new Date();
             
             let safety = 0;
             while (currentDate <= endDate && safety < 10000) {
-                dates.push(currentDate.toISOString().split('T')[0]);
+                dates.push(formatLocalDateKey(currentDate));
                 currentDate.setDate(currentDate.getDate() + 1);
                 safety++;
             }
@@ -484,6 +519,7 @@ export function initCharts(stats, themeKey = 'violet') {
  */
 export function generateDashboardHTML(stats, character, isGlobalMode = false, themeKey = 'violet') {
     const title = isGlobalMode ? '全部角色统计' : character.name;
+    const safeTitle = escapeHtml(title);
     const dateRange = stats.__meta?.dateRange || null;
     const dateBounds = stats.__meta?.dateBounds || null;
     const startValue = dateRange?.start || dateBounds?.min || '';
@@ -510,8 +546,8 @@ export function generateDashboardHTML(stats, character, isGlobalMode = false, th
         <div class="stats-dashboard ${themeClass}">
             <div class="stats-header-row">
                 <div class="stats-title-group">
-                    <h3><i class="fa-solid fa-chart-simple"></i> 统计报告: ${title}</h3>
-                    <small>${rangeDisplay}</small>
+                    <h3><i class="fa-solid fa-chart-simple"></i> 统计报告: ${safeTitle}</h3>
+                    <small>${escapeHtml(rangeDisplay)}</small>
                 </div>
 
                 <div class="stats-date-range">
@@ -695,9 +731,11 @@ export function closeOverlay() {
  * Setup event handlers for the dashboard
  */
 export function setupDashboardEvents(refreshCallback) {
+    const $overlay = $('#stats-overlay');
+    const $wrapper = $('#stats-content-wrapper');
     // Auto-scroll heatmap to the right
     setTimeout(() => {
-        const wrapper = $('.heatmap-scroll-wrapper');
+        const wrapper = $overlay.find('.heatmap-scroll-wrapper');
         if (wrapper.length) {
             const scrollWidth = wrapper[0].scrollWidth;
             wrapper.animate({ scrollLeft: scrollWidth }, 500);
@@ -705,7 +743,7 @@ export function setupDashboardEvents(refreshCallback) {
     }, 300);
 
     // Toggle card content - use event delegation
-    $('#stats-content-wrapper').off('click', '.card-toggle-btn').on('click', '.card-toggle-btn', function() {
+    $wrapper.off('click', '.card-toggle-btn').on('click', '.card-toggle-btn', function() {
         const btn = $(this);
         const content = btn.closest('.stats-card').find('.card-content');
         
@@ -717,40 +755,14 @@ export function setupDashboardEvents(refreshCallback) {
         content.slideToggle(200);
     });
 
-    // Heatmap cell interaction
-    $('#stats-content-wrapper').off('click mouseenter', '.heatmap-cell').on('click mouseenter', '.heatmap-cell', function() {
-        const date = $(this).data('date');
-        const count = $(this).data('count');
-        const files = $(this).data('files');
-        
-        $('.heatmap-cell').removeClass('active');
-        $(this).addClass('active');
-        
-        $('#heatmap-detail-date').text(date);
-        $('#heatmap-detail-msg').text(`${count} 消息`);
-        $('#heatmap-detail-files').text(`${files} 文件`);
-    });
-
-    // Hourly cell interaction
-    $('#stats-content-wrapper').off('click mouseenter', '.hourly-cell').on('click mouseenter', '.hourly-cell', function() {
-        const hour = parseInt($(this).data('hour'));
-        const count = $(this).data('count');
-        
-        $('.hourly-cell').css('border', 'none');
-        $(this).css('border', '1px solid #fff');
-        
-        $('#hourly-detail-time').text(`${hour}:00 - ${hour}:59`);
-        $('#hourly-detail-msg').text(`${count} 消息`);
-    });
-
     const getCurrentDateRange = () => {
-        const start = $('.stats-date-input.start-date').val();
-        const end = $('.stats-date-input.end-date').val();
+        const start = $overlay.find('.stats-date-input.start-date').val();
+        const end = $overlay.find('.stats-date-input.end-date').val();
         return { start: start || '', end: end || '' };
     };
 
     // Apply date range
-    $('#stats-content-wrapper').off('click', '.stats-date-apply').on('click', '.stats-date-apply', function() {
+    $wrapper.off('click', '.stats-date-apply').on('click', '.stats-date-apply', function() {
         const range = getCurrentDateRange();
         if (range.start && range.end && range.start > range.end) {
             toastr.error('开始日期不能晚于结束日期。');
@@ -762,7 +774,7 @@ export function setupDashboardEvents(refreshCallback) {
     });
 
     // Refresh button
-    $('.refresh-btn').off('click').on('click', function() {
+    $overlay.off('click', '.refresh-btn').on('click', '.refresh-btn', function() {
         const range = getCurrentDateRange();
         if (refreshCallback) {
             refreshCallback(true, range);
@@ -770,7 +782,7 @@ export function setupDashboardEvents(refreshCallback) {
     });
 
     // Download button
-    $('.download-btn').off('click').on('click', async function() {
+    $overlay.off('click', '.download-btn').on('click', '.download-btn', async function() {
         const dashboard = document.querySelector('.stats-dashboard');
         if (!dashboard) return;
 
@@ -794,7 +806,7 @@ export function setupDashboardEvents(refreshCallback) {
             });
 
             const link = document.createElement('a');
-            link.download = `SillyTavern_Stats_${new Date().toISOString().slice(0, 10)}.png`;
+            link.download = `SillyTavern_Stats_${formatLocalDateKey(new Date())}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
 
@@ -812,10 +824,10 @@ export function setupDashboardEvents(refreshCallback) {
     });
 
     // Close button
-    $('.close-btn').off('click').on('click', closeOverlay);
+    $overlay.off('click', '.close-btn').on('click', '.close-btn', closeOverlay);
 
     // Theme Switcher Button
-    $('.theme-btn').off('click').on('click', function() {
+    $overlay.off('click', '.theme-btn').on('click', '.theme-btn', function() {
         const btn = $(this);
         const currentTheme = btn.data('theme') || 'violet';
         const currentIndex = THEME_ORDER.indexOf(currentTheme);
@@ -830,7 +842,7 @@ export function setupDashboardEvents(refreshCallback) {
     });
 
     // Click outside to close
-    $('#stats-overlay').off('click').on('click', function(e) {
+    $overlay.off('click').on('click', function(e) {
         if (e.target === this || e.target.id === 'stats-content-wrapper') {
             closeOverlay();
         }

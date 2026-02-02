@@ -56,4 +56,4 @@ npm run build
 
 ## 许可证
 
-AGPL-3.0
+AGPL-3.0-only
