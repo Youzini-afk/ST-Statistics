@@ -527,6 +527,7 @@ export function setupDashboardEvents(refreshCallback) {
         }
 
         try {
+            dashboard.classList.add('export-mode');
             const canvas = await html2canvas(dashboard, {
                 backgroundColor: '#1f2023',
                 scale: 2,
@@ -544,6 +545,7 @@ export function setupDashboardEvents(refreshCallback) {
             console.error(error);
             toastr.error('导出图片失败。');
         } finally {
+            dashboard.classList.remove('export-mode');
             btn.html(originalHTML);
             if (actions) {
                 actions.style.display = 'flex';

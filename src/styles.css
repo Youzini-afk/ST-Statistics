@@ -80,6 +80,14 @@
     -webkit-text-fill-color: transparent;
 }
 
+/* 导出模式：禁用标题渐变/发光，避免截图发白 */
+.stats-dashboard.export-mode .stats-header-row h3 {
+    background: none;
+    -webkit-text-fill-color: #e5e7eb;
+    color: #e5e7eb;
+    text-shadow: none;
+}
+
 .stats-header-row small {
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     color: var(--st-text-muted);
