@@ -53,6 +53,7 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
     let character = null;
     let avatarUrl = null;
     let cacheKey = null;
+    let baseCacheKey = null;
 
     if (!isGlobalMode) {
         character = context.characters[characterId];
@@ -66,10 +67,12 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
         cacheKey = '__global__';
     }
 
+    baseCacheKey = cacheKey;
+
     const rangeKey = dateRange && (dateRange.start || dateRange.end)
         ? `__${dateRange.start || ''}_${dateRange.end || ''}`
         : '';
-    cacheKey = `${cacheKey}${rangeKey}`;
+    cacheKey = `${baseCacheKey}${rangeKey}`;
 
     const reportTitle = isGlobalMode ? '全部角色统计' : character.name;
 
@@ -102,9 +105,18 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
     };
 
     // Check cache
-    if (!forceRefresh && settings.cache && settings.cache[cacheKey]) {
+    let cachedEntry = (!forceRefresh && settings.cache) ? settings.cache[cacheKey] : null;
+    if (!forceRefresh && settings.cache && !cachedEntry) {
+        const candidateKeys = Object.keys(settings.cache).filter(key => key === baseCacheKey || key.startsWith(`${baseCacheKey}__`));
+        if (candidateKeys.length > 0) {
+            candidateKeys.sort((a, b) => (settings.cache[b].updatedAt || 0) - (settings.cache[a].updatedAt || 0));
+            cachedEntry = settings.cache[candidateKeys[0]];
+            cacheKey = candidateKeys[0];
+        }
+    }
+
+    if (!forceRefresh && cachedEntry) {
         logger.log(`Using cached stats for ${reportTitle}`);
-        const cachedEntry = settings.cache[cacheKey];
         const cachedStats = cachedEntry.stats ? cachedEntry.stats : cachedEntry;
         if (!cachedStats.__meta) {
             const dateRangeFromCache = cachedEntry.dateRange || dateRange || null;
@@ -257,7 +269,7 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
         if (!settings.cache) {
             settings.cache = {};
         }
-        settings.cache[cacheKey] = { stats, dateRange: normalizedRange, dateBounds };
+        settings.cache[cacheKey] = { stats, dateRange: normalizedRange, dateBounds, updatedAt: Date.now() };
         
         // Save settings
         if (globalThis.SillyTavern.saveSettingsDebounced) {
