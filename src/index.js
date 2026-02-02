@@ -76,11 +76,28 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
 
     const reportTitle = isGlobalMode ? '全部角色统计' : character.name;
 
+    // Get save function from context
     const saveSettingsNow = () => {
-        if (globalThis.SillyTavern.saveSettings) {
-            globalThis.SillyTavern.saveSettings();
-        } else if (globalThis.SillyTavern.saveSettingsDebounced) {
-            globalThis.SillyTavern.saveSettingsDebounced();
+        try {
+            const ctx = globalThis.SillyTavern.getContext();
+            // Try immediate save first, then debounced
+            if (typeof ctx.saveSettings === 'function') {
+                ctx.saveSettings();
+                logger.log('Settings saved immediately via context.saveSettings');
+            } else if (typeof ctx.saveSettingsDebounced === 'function') {
+                ctx.saveSettingsDebounced();
+                logger.log('Settings saved via context.saveSettingsDebounced');
+            } else if (typeof globalThis.saveSettings === 'function') {
+                globalThis.saveSettings();
+                logger.log('Settings saved via globalThis.saveSettings');
+            } else if (typeof globalThis.saveSettingsDebounced === 'function') {
+                globalThis.saveSettingsDebounced();
+                logger.log('Settings saved via globalThis.saveSettingsDebounced');
+            } else {
+                logger.warn('No save function available!');
+            }
+        } catch (e) {
+            logger.error('Failed to save settings:', e);
         }
     };
 
@@ -114,8 +131,11 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
 
     // Check cache
     let cachedEntry = (!forceRefresh && settings.cache) ? settings.cache[cacheKey] : null;
+    logger.log(`Cache check: forceRefresh=${forceRefresh}, cacheKey=${cacheKey}, hasCacheEntry=${!!cachedEntry}, cacheKeys=${settings.cache ? Object.keys(settings.cache).join(',') : 'none'}`);
+    
     if (!forceRefresh && settings.cache && !cachedEntry && settings.cacheIndex && settings.cacheIndex[baseCacheKey]) {
         const indexedKey = settings.cacheIndex[baseCacheKey];
+        logger.log(`Trying indexed key: ${indexedKey}`);
         if (settings.cache[indexedKey]) {
             cachedEntry = settings.cache[indexedKey];
             cacheKey = indexedKey;
@@ -123,6 +143,7 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
     }
     if (!forceRefresh && settings.cache && !cachedEntry) {
         const candidateKeys = Object.keys(settings.cache).filter(key => key === baseCacheKey || key.startsWith(`${baseCacheKey}__`));
+        logger.log(`Trying candidate keys: ${candidateKeys.join(',')}`);
         if (candidateKeys.length > 0) {
             candidateKeys.sort((a, b) => (settings.cache[b].updatedAt || 0) - (settings.cache[a].updatedAt || 0));
             cachedEntry = settings.cache[candidateKeys[0]];
@@ -131,7 +152,7 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
     }
 
     if (!forceRefresh && cachedEntry) {
-        logger.log(`Using cached stats for ${reportTitle}`);
+        logger.log(`Using cached stats for ${reportTitle}, has dailyDuration: ${!!cachedEntry.stats?.dailyDuration}, keys: ${Object.keys(cachedEntry.stats?.dailyDuration || {}).length}`);
         const cachedStats = cachedEntry.stats ? cachedEntry.stats : cachedEntry;
         if (!cachedStats.__meta) {
             const dateRangeFromCache = cachedEntry.dateRange || dateRange || null;
@@ -287,6 +308,9 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
             settings.cacheIndex = {};
         }
         settings.cacheIndex[baseCacheKey] = cacheKey;
+        
+        // Log cache data for debugging
+        logger.log(`Caching stats for ${cacheKey}, totalDuration: ${stats.overview?.totalDurationMinutes}m, dailyDuration keys: ${Object.keys(stats.dailyDuration || {}).length}`);
         
         // Save settings
         saveSettingsNow();
