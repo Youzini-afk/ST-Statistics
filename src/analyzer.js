@@ -95,7 +95,6 @@ export function analyzeChats(chatsData, options = {}) {
     const hourlyActivity = new Array(24).fill(0);
     const characterStats = {}; // 角色消息统计
     const dailyDuration = {}; // 每日时长统计 (分钟)
-    const dailyTimestamps = {}; // 每日消息时间戳
 
     let totalChats = 0;
 
@@ -118,11 +117,6 @@ export function analyzeChats(chatsData, options = {}) {
 
                 const dateKey = date.toISOString().split('T')[0];
                 dailyActivity[dateKey] = (dailyActivity[dateKey] || 0) + 1;
-
-                if (!dailyTimestamps[dateKey]) {
-                    dailyTimestamps[dateKey] = [];
-                }
-                dailyTimestamps[dateKey].push(date.getTime());
 
                 if (!dailyFileCounts[dateKey]) {
                     dailyFileCounts[dateKey] = new Set();
@@ -167,30 +161,85 @@ export function analyzeChats(chatsData, options = {}) {
         }
     });
 
-    // Calculate daily duration based on session gaps (30 minutes)
+    // Calculate daily duration using interaction-based estimation
+    // - User messages: estimate typing time (60 chars/min for CJK, 200 chars/min for Latin)
+    // - AI messages: estimate reading time (400 chars/min for CJK, 800 chars/min for Latin)
+    // - Session gap > 30 min = new session, don't add gap time
+    // - Minimum 1 min per session
     const SESSION_GAP_MS = 30 * 60 * 1000;
-    for (const [dayKey, timestamps] of Object.entries(dailyTimestamps)) {
-        if (!timestamps.length) continue;
-        timestamps.sort((a, b) => a - b);
-
-        let sessionStart = timestamps[0];
-        let prev = timestamps[0];
-        let minutes = 0;
-
-        for (let i = 1; i < timestamps.length; i++) {
-            const current = timestamps[i];
-            if (current - prev <= SESSION_GAP_MS) {
-                prev = current;
-                continue;
-            }
-            minutes += (prev - sessionStart) / (1000 * 60);
-            sessionStart = current;
-            prev = current;
+    
+    // Helper to estimate interaction time for a message
+    const estimateInteractionTime = (text, isUser) => {
+        if (!text) return 0.5; // minimum 30 seconds for empty
+        
+        const cjkRegex = /[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/g;
+        const cjkMatches = text.match(cjkRegex);
+        const cjkCount = cjkMatches ? cjkMatches.length : 0;
+        const nonCjkCount = text.length - cjkCount;
+        
+        if (isUser) {
+            // Typing speed: 60 CJK chars/min, 200 Latin chars/min
+            const cjkMins = cjkCount / 60;
+            const latinMins = nonCjkCount / 200;
+            return Math.max(0.25, cjkMins + latinMins); // min 15 seconds
+        } else {
+            // Reading speed: 400 CJK chars/min, 800 Latin chars/min
+            const cjkMins = cjkCount / 400;
+            const latinMins = nonCjkCount / 800;
+            return Math.max(0.1, cjkMins + latinMins); // min 6 seconds
         }
-
-        minutes += (prev - sessionStart) / (1000 * 60);
-        if (minutes < 1) minutes = 1;
-        dailyDuration[dayKey] = Math.round(minutes);
+    };
+    
+    // Collect messages with timestamps and text for duration calculation
+    const dailyMessages = {};
+    chatsData.forEach(chat => {
+        chat.messages.forEach(msg => {
+            const date = parseDate(msg.send_date);
+            if (!date) return;
+            
+            const inRange = !hasRange || ((!start || date >= start) && (!end || date <= end));
+            if (!inRange) return;
+            
+            const dateKey = date.toISOString().split('T')[0];
+            if (!dailyMessages[dateKey]) {
+                dailyMessages[dateKey] = [];
+            }
+            dailyMessages[dateKey].push({
+                timestamp: date.getTime(),
+                text: msg.mes || '',
+                isUser: !!msg.is_user
+            });
+        });
+    });
+    
+    for (const [dayKey, messages] of Object.entries(dailyMessages)) {
+        if (!messages.length) continue;
+        messages.sort((a, b) => a.timestamp - b.timestamp);
+        
+        let totalMinutes = 0;
+        let sessionMinutes = 0;
+        let prevTimestamp = messages[0].timestamp;
+        
+        for (let i = 0; i < messages.length; i++) {
+            const msg = messages[i];
+            const gap = msg.timestamp - prevTimestamp;
+            
+            // If gap > 30 min, start new session
+            if (i > 0 && gap > SESSION_GAP_MS) {
+                // Add previous session (min 1 minute per session)
+                totalMinutes += Math.max(1, sessionMinutes);
+                sessionMinutes = 0;
+            }
+            
+            // Add interaction time for this message
+            sessionMinutes += estimateInteractionTime(msg.text, msg.isUser);
+            prevTimestamp = msg.timestamp;
+        }
+        
+        // Add last session
+        totalMinutes += Math.max(1, sessionMinutes);
+        
+        dailyDuration[dayKey] = Math.round(totalMinutes);
     }
 
     // Calculate user tokens: Chinese ~1.5 chars per token
