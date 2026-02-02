@@ -382,11 +382,26 @@
     color: var(--st-text-muted);
     transition: color 0.2s ease, transform 0.2s ease;
     padding: 5px;
+    font-size: 1.1em;
 }
 
 .card-toggle-btn:hover {
     color: var(--st-primary);
     transform: rotate(90deg);
+}
+
+/* Card collapse state */
+.card-content {
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    max-height: 2000px;
+    opacity: 1;
+}
+
+.card-content.collapsed {
+    max-height: 0;
+    opacity: 0;
+    margin-top: 0;
 }
 
 /* 指标网格 */

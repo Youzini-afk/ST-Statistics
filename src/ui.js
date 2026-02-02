@@ -745,16 +745,23 @@ export function setupDashboardEvents(refreshCallback) {
     }, 300);
 
     // Toggle card content - use event delegation
-    $wrapper.off('click', '.card-toggle-btn').on('click', '.card-toggle-btn', function() {
+    $wrapper.off('click', '.card-toggle-btn').on('click', '.card-toggle-btn', function(e) {
+        e.stopPropagation();
         const btn = $(this);
-        const content = btn.closest('.stats-card').find('.card-content');
+        const card = btn.closest('.stats-card');
+        const content = card.find('.card-content');
         
-        if (btn.hasClass('fa-chevron-up')) {
-            btn.removeClass('fa-chevron-up').addClass('fa-chevron-down');
-        } else {
+        const isCollapsed = content.hasClass('collapsed');
+        
+        if (isCollapsed) {
+            // Expand
+            content.removeClass('collapsed');
             btn.removeClass('fa-chevron-down').addClass('fa-chevron-up');
+        } else {
+            // Collapse
+            content.addClass('collapsed');
+            btn.removeClass('fa-chevron-up').addClass('fa-chevron-down');
         }
-        content.slideToggle(200);
     });
 
     const getCurrentDateRange = () => {
