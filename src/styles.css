@@ -748,21 +748,30 @@
         gap: 12px !important;
     }
 
-    /* 图表区域高度优化 */
-    .card-content[style*="min-height: 320px"] {
-        min-height: 160px !important;
+    /* 图表区域 - 让canvas填满容器 */
+    .card-content {
+        min-height: auto !important;
     }
 
-    .card-content[style*="min-height: 260px"] {
-        min-height: 150px !important;
+    .card-content canvas {
+        width: 100% !important;
+        height: auto !important;
+        max-height: 200px;
     }
 
-    .card-content[style*="min-height: 250px"] {
-        min-height: 150px !important;
+    /* 每日活跃度图表 */
+    #timelineChart {
+        max-height: 180px !important;
     }
 
-    .card-content[style*="min-height: 400px"] {
-        min-height: 200px !important;
+    /* 每日时长图表 */
+    #dailyDurationChart {
+        max-height: 160px !important;
+    }
+
+    /* 小时分布图表 */
+    #hourlyChart {
+        max-height: 140px !important;
     }
 
     /* 总时长仪表盘 */
