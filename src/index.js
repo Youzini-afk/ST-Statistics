@@ -23,6 +23,11 @@ if (!extensionSettings[EXTENSION_NAME]) {
 
 const settings = extensionSettings[EXTENSION_NAME];
 
+// Ensure default theme is set (for existing users)
+if (!settings.theme) {
+    settings.theme = CONFIG.DEFAULT_SETTINGS.theme || 'violet';
+}
+
 // Abort controller for cancelling operations
 let currentAbortController = null;
 
@@ -68,6 +73,29 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
 
     const reportTitle = isGlobalMode ? '全部角色统计' : character.name;
 
+    // Helper to setup events with correct context
+    const bindEvents = (statsToUse) => {
+        setupDashboardEvents((force, range, newTheme) => {
+            if (newTheme) {
+                // Update theme setting
+                settings.theme = newTheme;
+                if (globalThis.SillyTavern.saveSettingsDebounced) {
+                    globalThis.SillyTavern.saveSettingsDebounced();
+                }
+                
+                // Re-render dashboard with new theme (no data fetch needed)
+                const html = generateDashboardHTML(statsToUse, isGlobalMode ? null : character, isGlobalMode, settings.theme);
+                $('#stats-content-wrapper').html(html);
+                initCharts(statsToUse, settings.theme);
+                // Re-bind events
+                bindEvents(statsToUse);
+            } else {
+                // Refresh data or date range
+                generateReport(force, isGlobalMode, range);
+            }
+        });
+    };
+
     // Check cache
     if (!forceRefresh && settings.cache && settings.cache[cacheKey]) {
         logger.log(`Using cached stats for ${reportTitle}`);
@@ -78,11 +106,11 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
             const dateBoundsFromCache = cachedEntry.dateBounds || null;
             cachedStats.__meta = { dateRange: dateRangeFromCache, dateBounds: dateBoundsFromCache };
         }
-        const dashboardHTML = generateDashboardHTML(cachedStats, isGlobalMode ? null : character, isGlobalMode);
+        const dashboardHTML = generateDashboardHTML(cachedStats, isGlobalMode ? null : character, isGlobalMode, settings.theme);
         showOverlay(dashboardHTML);
         // Initialize charts for cached data
-        initCharts(cachedStats);
-        setupDashboardEvents((force, range) => generateReport(force, isGlobalMode, range));
+        initCharts(cachedStats, settings.theme);
+        bindEvents(cachedStats);
         toastr.success('已加载缓存的统计报告。', 'Stats');
         return;
     }
@@ -216,11 +244,11 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
         }
 
         // Display dashboard
-        const dashboardHTML = generateDashboardHTML(stats, isGlobalMode ? null : character, isGlobalMode);
+        const dashboardHTML = generateDashboardHTML(stats, isGlobalMode ? null : character, isGlobalMode, settings.theme);
         $('#stats-content-wrapper').html(dashboardHTML);
         // Initialize charts for fresh data
-        initCharts(stats);
-        setupDashboardEvents((force, range) => generateReport(force, isGlobalMode, range));
+        initCharts(stats, settings.theme);
+        bindEvents(stats);
 
         toastr.success('统计报告生成完毕！', 'Stats');
 

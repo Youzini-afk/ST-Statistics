@@ -12,6 +12,46 @@
     --st-heatmap-level-4: rgba(139, 92, 246, 0.9);
 }
 
+/* Theme: Blue (Ocean) */
+.theme-blue {
+    --st-primary: #3b82f6;
+    --st-primary-glow: rgba(59, 130, 246, 0.4);
+    --st-heatmap-level-1: rgba(59, 130, 246, 0.3);
+    --st-heatmap-level-2: rgba(59, 130, 246, 0.5);
+    --st-heatmap-level-3: rgba(59, 130, 246, 0.7);
+    --st-heatmap-level-4: rgba(59, 130, 246, 0.9);
+}
+
+/* Theme: Emerald (Nature) */
+.theme-emerald {
+    --st-primary: #10b981;
+    --st-primary-glow: rgba(16, 185, 129, 0.4);
+    --st-heatmap-level-1: rgba(16, 185, 129, 0.3);
+    --st-heatmap-level-2: rgba(16, 185, 129, 0.5);
+    --st-heatmap-level-3: rgba(16, 185, 129, 0.7);
+    --st-heatmap-level-4: rgba(16, 185, 129, 0.9);
+}
+
+/* Theme: Amber (Sunset) */
+.theme-amber {
+    --st-primary: #f59e0b;
+    --st-primary-glow: rgba(245, 158, 11, 0.4);
+    --st-heatmap-level-1: rgba(245, 158, 11, 0.3);
+    --st-heatmap-level-2: rgba(245, 158, 11, 0.5);
+    --st-heatmap-level-3: rgba(245, 158, 11, 0.7);
+    --st-heatmap-level-4: rgba(245, 158, 11, 0.9);
+}
+
+/* Theme: Rose (Passion) */
+.theme-rose {
+    --st-primary: #f43f5e;
+    --st-primary-glow: rgba(244, 63, 94, 0.4);
+    --st-heatmap-level-1: rgba(244, 63, 94, 0.3);
+    --st-heatmap-level-2: rgba(244, 63, 94, 0.5);
+    --st-heatmap-level-3: rgba(244, 63, 94, 0.7);
+    --st-heatmap-level-4: rgba(244, 63, 94, 0.9);
+}
+
 /* 全屏覆盖层 (Overlay) */
 #stats-overlay {
     position: fixed;

@@ -8,6 +8,17 @@ import Chart from 'chart.js/auto';
 const logger = new Logger('Stats-UI');
 let charts = {}; // Store chart instances to destroy them later
 
+// Theme definitions
+export const THEMES = {
+    violet: { name: 'Violet', class: '', color: '139, 92, 246', hex: '#8b5cf6' },
+    blue: { name: 'Blue', class: 'theme-blue', color: '59, 130, 246', hex: '#3b82f6' },
+    emerald: { name: 'Emerald', class: 'theme-emerald', color: '16, 185, 129', hex: '#10b981' },
+    amber: { name: 'Amber', class: 'theme-amber', color: '245, 158, 11', hex: '#f59e0b' },
+    rose: { name: 'Rose', class: 'theme-rose', color: '244, 63, 94', hex: '#f43f5e' }
+};
+
+const THEME_ORDER = ['violet', 'blue', 'emerald', 'amber', 'rose'];
+
 /**
  * Cleanup existing charts
  */
@@ -31,7 +42,7 @@ function formatNumber(num) {
 /**
  * Generate 24-hour heatmap HTML (Visual Gradient Strip)
  */
-function generateHourlyHeatmapHTML(hourlyActivity) {
+function generateHourlyHeatmapHTML(hourlyActivity, themeColor = '139, 92, 246') {
     const maxCount = Math.max(...hourlyActivity, 1);
     
     let heatmapHTML = `<div class="hourly-heatmap-container" style="margin-top: 15px;">`;
@@ -49,7 +60,7 @@ function generateHourlyHeatmapHTML(hourlyActivity) {
         heatmapHTML += `
             <div class="hourly-heatmap-cell" 
                  title="${i}:00 - ${i}:59 : ${count} messages"
-                 style="flex: 1; background-color: rgba(139, 92, 246, ${alpha}); position: relative; cursor: help;">
+                 style="flex: 1; background-color: rgba(${themeColor}, ${alpha}); position: relative; cursor: help;">
             </div>
         `;
     }
@@ -62,8 +73,12 @@ function generateHourlyHeatmapHTML(hourlyActivity) {
 /**
  * Render Chart.js charts after DOM insertion
  */
-export function initCharts(stats) {
+export function initCharts(stats, themeKey = 'violet') {
     cleanupCharts();
+
+    const theme = THEMES[themeKey] || THEMES.violet;
+    const colorRGB = theme.color;
+    const colorHex = theme.hex;
 
     // 1. Timeline Chart (Bar Chart for Daily Activity)
     const ctxTimeline = document.getElementById('timelineChart');
@@ -73,15 +88,15 @@ export function initCharts(stats) {
             const dates = [];
             let currentDate = firstDateObj;
             const endDate = new Date(); // Today
-        
-        let safety = 0;
-        while (currentDate <= endDate && safety < 10000) {
-            dates.push(currentDate.toISOString().split('T')[0]);
-            currentDate.setDate(currentDate.getDate() + 1);
-            safety++;
-        }
+            
+            let safety = 0;
+            while (currentDate <= endDate && safety < 10000) {
+                dates.push(currentDate.toISOString().split('T')[0]);
+                currentDate.setDate(currentDate.getDate() + 1);
+                safety++;
+            }
 
-        const dataPoints = dates.map(date => stats.dailyActivity[date] || 0);
+            const dataPoints = dates.map(date => stats.dailyActivity[date] || 0);
 
             charts.timeline = new Chart(ctxTimeline, {
                 type: 'bar',
@@ -90,8 +105,8 @@ export function initCharts(stats) {
                     datasets: [{
                         label: '每日消息数量',
                         data: dataPoints,
-                        backgroundColor: 'rgba(139, 92, 246, 0.6)',
-                        borderColor: 'rgba(139, 92, 246, 1)',
+                        backgroundColor: `rgba(${colorRGB}, 0.6)`,
+                        borderColor: `rgba(${colorRGB}, 1)`,
                         borderWidth: 1,
                         barPercentage: 0.8,
                         categoryPercentage: 0.9,
@@ -143,10 +158,10 @@ export function initCharts(stats) {
                 datasets: [{
                     label: '消息数量',
                     data: stats.hourlyActivity,
-                    borderColor: 'rgba(139, 92, 246, 1)',
-                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                    borderColor: `rgba(${colorRGB}, 1)`,
+                    backgroundColor: `rgba(${colorRGB}, 0.1)`,
                     borderWidth: 2,
-                    pointBackgroundColor: 'rgba(139, 92, 246, 1)',
+                    pointBackgroundColor: `rgba(${colorRGB}, 1)`,
                     pointRadius: 2,
                     pointHoverRadius: 5,
                     fill: true,
@@ -208,24 +223,34 @@ export function initCharts(stats) {
             data = modelEntries.map(e => e[1]);
         }
 
+        // Generate colors based on theme but varied
+        const bgColors = [
+            `rgba(${colorRGB}, 0.8)`, // Primary
+            'rgba(59, 130, 246, 0.8)',
+            'rgba(16, 185, 129, 0.8)',
+            'rgba(245, 158, 11, 0.8)',
+            'rgba(239, 68, 68, 0.8)',
+            'rgba(236, 72, 153, 0.8)',
+            'rgba(99, 102, 241, 0.8)',
+            'rgba(20, 184, 166, 0.8)',
+            'rgba(217, 70, 239, 0.8)',
+            'rgba(249, 115, 22, 0.8)'
+        ];
+
+        // Ensure the first color matches theme (if not already handled by manual array)
+        if (themeKey !== 'violet') {
+             // Just keeping the array is simpler, chartjs will cycle or we can construct it dynamically
+             // For now, let's just make the FIRST one the theme color
+             bgColors[0] = `rgba(${colorRGB}, 0.8)`;
+        }
+
         charts.model = new Chart(ctxModel, {
             type: 'doughnut',
             data: {
                 labels: labels,
                 datasets: [{
                     data: data,
-                    backgroundColor: [
-                        'rgba(139, 92, 246, 0.8)',
-                        'rgba(59, 130, 246, 0.8)',
-                        'rgba(16, 185, 129, 0.8)',
-                        'rgba(245, 158, 11, 0.8)',
-                        'rgba(239, 68, 68, 0.8)',
-                        'rgba(236, 72, 153, 0.8)',
-                        'rgba(99, 102, 241, 0.8)',
-                        'rgba(20, 184, 166, 0.8)',
-                        'rgba(217, 70, 239, 0.8)',
-                        'rgba(249, 115, 22, 0.8)'
-                    ],
+                    backgroundColor: bgColors,
                     borderWidth: 0
                 }]
             },
@@ -267,10 +292,9 @@ export function initCharts(stats) {
                 datasets: [{
                     label: '消息数',
                     data: charData,
-                    backgroundColor: 'rgba(139, 92, 246, 0.7)',
-                    borderColor: 'rgba(139, 92, 246, 1)',
-                    borderWidth: 1,
-                    borderRadius: 4
+                    backgroundColor: `rgba(${colorRGB}, 0.7)`,
+                    borderColor: `rgba(${colorRGB}, 1)`,
+                    borderWidth: 1
                 }]
             },
             options: {
@@ -309,7 +333,7 @@ export function initCharts(stats) {
 /**
  * Generate full statistics dashboard HTML
  */
-export function generateDashboardHTML(stats, character, isGlobalMode = false) {
+export function generateDashboardHTML(stats, character, isGlobalMode = false, themeKey = 'violet') {
     const title = isGlobalMode ? '全部角色统计' : character.name;
     const dateRange = stats.__meta?.dateRange || null;
     const dateBounds = stats.__meta?.dateBounds || null;
@@ -320,8 +344,21 @@ export function generateDashboardHTML(stats, character, isGlobalMode = false) {
     const rangeDisplay = stats.overview.firstDate !== 'N/A'
         ? `${stats.overview.firstDate} - ${stats.overview.lastDate}`
         : (startValue || endValue ? `${startValue || 'N/A'} - ${endValue || 'N/A'}` : 'N/A');
+
+    const theme = THEMES[themeKey] || THEMES.violet;
+    const themeClass = theme.class;
+    const themeColor = theme.color;
+    // Map theme to icon
+    const themeIcon = {
+        'violet': 'fa-droplet',
+        'blue': 'fa-water',
+        'emerald': 'fa-leaf',
+        'amber': 'fa-sun',
+        'rose': 'fa-fire'
+    }[themeKey] || 'fa-palette';
+
     return `
-        <div class="stats-dashboard">
+        <div class="stats-dashboard ${themeClass}">
             <div class="stats-header-row">
                 <div class="stats-title-group">
                     <h3><i class="fa-solid fa-chart-simple"></i> 统计报告: ${title}</h3>
@@ -337,6 +374,9 @@ export function generateDashboardHTML(stats, character, isGlobalMode = false) {
                 </div>
                 
                 <div class="stats-actions">
+                    <div class="stats-btn theme-btn" title="切换配色 (Change Theme: ${theme.name})" data-theme="${themeKey}">
+                        <i class="fa-solid ${themeIcon}"></i>
+                    </div>
                     <div class="stats-btn refresh-btn" title="刷新数据 (Refresh)">
                         <i class="fa-solid fa-arrows-rotate"></i>
                     </div>
@@ -410,7 +450,7 @@ export function generateDashboardHTML(stats, character, isGlobalMode = false) {
                          <div style="margin-bottom: 10px; font-size: 0.9em; color: var(--st-text-muted);">
                             基于全时段的消息密度热力图与趋势统计
                         </div>
-                        ${generateHourlyHeatmapHTML(stats.hourlyActivity)}
+                        ${generateHourlyHeatmapHTML(stats.hourlyActivity, themeColor)}
                         <div style="height: 200px; margin-top: 20px; position: relative;">
                             <canvas id="hourlyChart"></canvas>
                         </div>
@@ -596,6 +636,21 @@ export function setupDashboardEvents(refreshCallback) {
 
     // Close button
     $('.close-btn').off('click').on('click', closeOverlay);
+
+    // Theme Switcher Button
+    $('.theme-btn').off('click').on('click', function() {
+        const btn = $(this);
+        const currentTheme = btn.data('theme') || 'violet';
+        const currentIndex = THEME_ORDER.indexOf(currentTheme);
+        const nextIndex = (currentIndex + 1) % THEME_ORDER.length;
+        const nextTheme = THEME_ORDER[nextIndex];
+        
+        if (refreshCallback) {
+            // Pass the new theme to the callback
+            // (force=false, range=null, newTheme=nextTheme)
+            refreshCallback(false, null, nextTheme);
+        }
+    });
 
     // Click outside to close
     $('#stats-overlay').off('click').on('click', function(e) {
