@@ -1,11 +1,28 @@
 :root {
     --st-primary: #8b5cf6; /* Violet-500 */
+    --st-primary-rgb: 139, 92, 246;
     --st-primary-glow: rgba(139, 92, 246, 0.4);
-    --st-bg-color: rgba(20, 21, 25, 0.85);
+    --st-bg-color: rgba(20, 21, 25, 0.9);
+    --st-overlay-bg: rgba(5, 5, 8, 0.8);
     --st-card-bg: rgba(255, 255, 255, 0.05);
-    --st-card-border: rgba(255, 255, 255, 0.08);
+    --st-card-border: rgba(139, 92, 246, 0.15);
     --st-text-color: #f3f4f6;
     --st-text-muted: #9ca3af;
+    --st-heatmap-level-1: rgba(139, 92, 246, 0.3);
+    --st-heatmap-level-2: rgba(139, 92, 246, 0.5);
+    --st-heatmap-level-3: rgba(139, 92, 246, 0.7);
+    --st-heatmap-level-4: rgba(139, 92, 246, 0.9);
+}
+
+/* Theme: Violet (Default) */
+.theme-violet {
+    --st-primary: #8b5cf6;
+    --st-primary-rgb: 139, 92, 246;
+    --st-primary-glow: rgba(139, 92, 246, 0.4);
+    --st-bg-color: rgba(20, 21, 30, 0.9);
+    --st-overlay-bg: rgba(5, 5, 10, 0.8);
+    --st-card-bg: rgba(139, 92, 246, 0.05);
+    --st-card-border: rgba(139, 92, 246, 0.15);
     --st-heatmap-level-1: rgba(139, 92, 246, 0.3);
     --st-heatmap-level-2: rgba(139, 92, 246, 0.5);
     --st-heatmap-level-3: rgba(139, 92, 246, 0.7);
@@ -15,7 +32,12 @@
 /* Theme: Blue (Ocean) */
 .theme-blue {
     --st-primary: #3b82f6;
+    --st-primary-rgb: 59, 130, 246;
     --st-primary-glow: rgba(59, 130, 246, 0.4);
+    --st-bg-color: rgba(15, 23, 42, 0.95);
+    --st-overlay-bg: rgba(2, 6, 23, 0.85);
+    --st-card-bg: rgba(59, 130, 246, 0.05);
+    --st-card-border: rgba(59, 130, 246, 0.2);
     --st-heatmap-level-1: rgba(59, 130, 246, 0.3);
     --st-heatmap-level-2: rgba(59, 130, 246, 0.5);
     --st-heatmap-level-3: rgba(59, 130, 246, 0.7);
@@ -25,7 +47,12 @@
 /* Theme: Emerald (Nature) */
 .theme-emerald {
     --st-primary: #10b981;
+    --st-primary-rgb: 16, 185, 129;
     --st-primary-glow: rgba(16, 185, 129, 0.4);
+    --st-bg-color: rgba(6, 28, 20, 0.95);
+    --st-overlay-bg: rgba(2, 20, 10, 0.85);
+    --st-card-bg: rgba(16, 185, 129, 0.05);
+    --st-card-border: rgba(16, 185, 129, 0.2);
     --st-heatmap-level-1: rgba(16, 185, 129, 0.3);
     --st-heatmap-level-2: rgba(16, 185, 129, 0.5);
     --st-heatmap-level-3: rgba(16, 185, 129, 0.7);
@@ -35,7 +62,12 @@
 /* Theme: Amber (Sunset) */
 .theme-amber {
     --st-primary: #f59e0b;
+    --st-primary-rgb: 245, 158, 11;
     --st-primary-glow: rgba(245, 158, 11, 0.4);
+    --st-bg-color: rgba(30, 20, 5, 0.95);
+    --st-overlay-bg: rgba(20, 10, 0, 0.85);
+    --st-card-bg: rgba(245, 158, 11, 0.05);
+    --st-card-border: rgba(245, 158, 11, 0.2);
     --st-heatmap-level-1: rgba(245, 158, 11, 0.3);
     --st-heatmap-level-2: rgba(245, 158, 11, 0.5);
     --st-heatmap-level-3: rgba(245, 158, 11, 0.7);
@@ -45,7 +77,12 @@
 /* Theme: Rose (Passion) */
 .theme-rose {
     --st-primary: #f43f5e;
+    --st-primary-rgb: 244, 63, 94;
     --st-primary-glow: rgba(244, 63, 94, 0.4);
+    --st-bg-color: rgba(30, 5, 15, 0.95);
+    --st-overlay-bg: rgba(20, 0, 5, 0.85);
+    --st-card-bg: rgba(244, 63, 94, 0.05);
+    --st-card-border: rgba(244, 63, 94, 0.2);
     --st-heatmap-level-1: rgba(244, 63, 94, 0.3);
     --st-heatmap-level-2: rgba(244, 63, 94, 0.5);
     --st-heatmap-level-3: rgba(244, 63, 94, 0.7);
@@ -62,7 +99,7 @@
     width: 100vw;
     height: 100vh;
     z-index: 2147483647 !important;
-    background-color: rgba(5, 5, 8, 0.8); 
+    background-color: var(--st-overlay-bg); 
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     overflow-y: auto;
@@ -117,7 +154,7 @@
     align-items: center;
     gap: 12px;
     margin: 0;
-    background: linear-gradient(135deg, #fff 0%, #c4b5fd 100%);
+    background: linear-gradient(135deg, #fff 20%, var(--st-primary) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -146,7 +183,7 @@
     align-items: center;
     gap: 8px;
     background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(139, 92, 246, 0.25);
+    border: 1px solid rgba(var(--st-primary-rgb), 0.25);
     border-radius: 10px;
     padding: 6px 10px;
 }
@@ -173,12 +210,12 @@
 .stats-date-input:focus {
     outline: none;
     border-color: var(--st-primary);
-    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+    box-shadow: 0 0 0 2px rgba(var(--st-primary-rgb), 0.2);
 }
 
 .stats-date-apply {
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.7), rgba(99, 102, 241, 0.7));
-    border: 1px solid rgba(139, 92, 246, 0.6);
+    background: linear-gradient(135deg, rgba(var(--st-primary-rgb), 0.7), rgba(var(--st-primary-rgb), 0.7));
+    border: 1px solid rgba(var(--st-primary-rgb), 0.6);
     color: #fff;
     border-radius: 6px;
     padding: 4px 10px;
@@ -188,9 +225,9 @@
 }
 
 .stats-date-apply:hover {
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(99, 102, 241, 0.9));
-    border-color: rgba(139, 92, 246, 0.9);
-    box-shadow: 0 6px 14px rgba(139, 92, 246, 0.35);
+    background: linear-gradient(135deg, rgba(var(--st-primary-rgb), 0.9), rgba(var(--st-primary-rgb), 0.9));
+    border-color: rgba(var(--st-primary-rgb), 0.9);
+    box-shadow: 0 6px 14px rgba(var(--st-primary-rgb), 0.35);
 }
 
 /* 按钮工具栏 */

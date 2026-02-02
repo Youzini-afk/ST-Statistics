@@ -7,7 +7,7 @@ import { Logger } from './logger.js';
 import { CONFIG } from './config.js';
 import { fetchAllChats, fetchAllCharactersChats } from './api.js';
 import { analyzeChats, parseDate } from './analyzer.js';
-import { showOverlay, generateDashboardHTML, setupDashboardEvents, closeOverlay, initCharts } from './ui.js';
+import { showOverlay, generateDashboardHTML, setupDashboardEvents, closeOverlay, initCharts, THEMES } from './ui.js';
 
 const logger = new Logger('Stats');
 
@@ -86,6 +86,11 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
                 // Re-render dashboard with new theme (no data fetch needed)
                 const html = generateDashboardHTML(statsToUse, isGlobalMode ? null : character, isGlobalMode, settings.theme);
                 $('#stats-content-wrapper').html(html);
+                
+                // Update overlay theme
+                const themeClass = (THEMES[newTheme] || THEMES.violet).class;
+                $('#stats-overlay').removeClass().addClass(themeClass);
+
                 initCharts(statsToUse, settings.theme);
                 // Re-bind events
                 bindEvents(statsToUse);
@@ -107,7 +112,7 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
             cachedStats.__meta = { dateRange: dateRangeFromCache, dateBounds: dateBoundsFromCache };
         }
         const dashboardHTML = generateDashboardHTML(cachedStats, isGlobalMode ? null : character, isGlobalMode, settings.theme);
-        showOverlay(dashboardHTML);
+        showOverlay(dashboardHTML, settings.theme);
         // Initialize charts for cached data
         initCharts(cachedStats, settings.theme);
         bindEvents(cachedStats);
@@ -136,7 +141,7 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
                 <p id="stats-count-text" style="font-size: 0.9em; color: #888; margin-top: 5px;">0 / 0</p>
             </div>
         </div>
-    `);
+    `, settings.theme);
 
     // Setup cancel button for loading screen
     $('.close-btn').off('click').on('click', () => {

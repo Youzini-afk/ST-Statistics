@@ -489,11 +489,14 @@ export function generateDashboardHTML(stats, character, isGlobalMode = false, th
 /**
  * Show overlay with content
  */
-export function showOverlay(content) {
+export function showOverlay(content, themeKey = 'violet') {
     $('#stats-overlay').remove();
     
+    const theme = THEMES[themeKey] || THEMES.violet;
+    const themeClass = theme.class;
+
     const overlay = $(`
-        <div id="stats-overlay">
+        <div id="stats-overlay" class="${themeClass}">
             <div id="stats-content-wrapper" style="width: 100%; display: flex; justify-content: center;">
                 ${content}
             </div>
