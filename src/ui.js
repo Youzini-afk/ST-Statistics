@@ -621,7 +621,7 @@ export function generateDashboardHTML(stats, character, isGlobalMode = false, th
                     <h4><i class="fa-solid fa-chart-column"></i> 每日活跃度统计 (从开始至今)</h4>
                     <i class="fa-solid fa-chevron-up card-toggle-btn"></i>
                 </div>
-                <div class="card-content" style="height: 320px; position: relative;">
+                <div class="card-content" style="min-height: 320px; position: relative;">
                     <canvas id="timelineChart"></canvas>
                 </div>
             </div>
@@ -634,7 +634,7 @@ export function generateDashboardHTML(stats, character, isGlobalMode = false, th
                         <h4><i class="fa-solid fa-hourglass-half"></i> 总时长</h4>
                         <i class="fa-solid fa-chevron-up card-toggle-btn"></i>
                     </div>
-                    <div class="card-content" style="display: flex; justify-content: center; align-items: center; height: 260px; position: relative;">
+                    <div class="card-content" style="display: flex; justify-content: center; align-items: center; min-height: 260px; position: relative;">
                         <canvas id="durationGaugeChart"></canvas>
                     </div>
                 </div>
@@ -645,7 +645,7 @@ export function generateDashboardHTML(stats, character, isGlobalMode = false, th
                         <h4><i class="fa-solid fa-clock-rotate-left"></i> 每日时长统计 (从开始至今)</h4>
                         <i class="fa-solid fa-chevron-up card-toggle-btn"></i>
                     </div>
-                    <div class="card-content" style="height: 260px; position: relative;">
+                    <div class="card-content" style="min-height: 260px; position: relative;">
                         <canvas id="dailyDurationChart"></canvas>
                     </div>
                 </div>
@@ -675,7 +675,7 @@ export function generateDashboardHTML(stats, character, isGlobalMode = false, th
                         <h4><i class="fa-solid fa-pie-chart"></i> 模型偏好</h4>
                         <i class="fa-solid fa-chevron-up card-toggle-btn"></i>
                     </div>
-                    <div class="card-content" style="height: 250px; position: relative;">
+                    <div class="card-content" style="min-height: 250px; position: relative;">
                         <canvas id="modelPieChart"></canvas>
                     </div>
                 </div>
@@ -688,7 +688,7 @@ export function generateDashboardHTML(stats, character, isGlobalMode = false, th
                     <h4><i class="fa-solid fa-ranking-star"></i> 角色消息排行</h4>
                     <i class="fa-solid fa-chevron-up card-toggle-btn"></i>
                 </div>
-                <div class="card-content" style="height: 400px; position: relative;">
+                <div class="card-content" style="min-height: 400px; position: relative;">
                     <canvas id="characterRankingChart"></canvas>
                 </div>
             </div>
