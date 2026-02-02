@@ -399,6 +399,56 @@
     display: none !important;
 }
 
+/* 图表容器类样式 */
+.chart-card-timeline {
+    grid-column: span 3;
+    min-height: 400px;
+}
+
+.chart-card-ranking {
+    grid-column: span 3;
+    min-height: 350px;
+}
+
+.chart-content-lg {
+    min-height: 320px;
+    position: relative;
+}
+
+.chart-content-md {
+    min-height: 250px;
+}
+
+.chart-content-xl {
+    min-height: 400px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.chart-content-gauge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 250px;
+}
+
+.duration-stats-grid {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+}
+
+.hourly-model-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.hourly-chart-container {
+    height: 200px;
+    margin-top: 20px;
+}
+
 /* 指标网格 */
 .stats-metrics-row {
     display: grid;
@@ -734,49 +784,43 @@
         font-size: 0.95em;
     }
 
-    /* 时长统计 - 改为上下布局 */
-    .stats-dashboard > div[style*="grid-template-columns: 300px"] {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 12px !important;
-    }
-
-    /* 24小时分布 & 模型偏好 - 改为上下布局 */
-    .stats-dashboard > div[style*="grid-template-columns: 1fr 1fr"] {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 12px !important;
-    }
-
-    /* 图表区域 - 让canvas填满容器 */
-    .card-content {
+    /* 图表容器类 - 移动端样式 */
+    .chart-card-timeline {
+        grid-column: span 1 !important;
         min-height: auto !important;
     }
-
-    .card-content canvas {
-        width: 100% !important;
-        height: auto !important;
-        max-height: 200px;
+    
+    .chart-content-lg {
+        min-height: 220px !important;
     }
-
-    /* 每日活跃度图表 */
-    #timelineChart {
-        max-height: 180px !important;
+    
+    .chart-content-md {
+        min-height: 180px !important;
     }
-
-    /* 每日时长图表 */
-    #dailyDurationChart {
-        max-height: 160px !important;
+    
+    .chart-content-xl {
+        min-height: 280px !important;
     }
-
-    /* 小时分布图表 */
-    #hourlyChart {
-        max-height: 140px !important;
+    
+    .chart-content-gauge {
+        min-height: auto !important;
+        height: 180px !important;
     }
-
-    /* 总时长仪表盘 */
-    #durationGaugeChart {
-        max-height: 180px;
+    
+    .duration-stats-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+    
+    .hourly-model-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+    
+    .hourly-chart-container {
+        height: 160px !important;
     }
 
     /* 热力图文字 */
@@ -784,13 +828,10 @@
         font-size: 0.8em;
     }
 
-    /* 模型偏好图例 */
-    .stats-card canvas#modelPieChart {
-        max-height: 200px;
-    }
-
     /* 跨列卡片 */
-    .stats-card[style*="grid-column: span"] {
+    .stats-card[style*="grid-column: span"],
+    .chart-card-timeline,
+    .chart-card-ranking {
         grid-column: span 1 !important;
     }
 
@@ -827,5 +868,13 @@
     .stats-btn {
         width: 32px;
         height: 32px;
+    }
+    
+    .chart-content-lg {
+        min-height: 200px !important;
+    }
+    
+    .chart-content-md {
+        min-height: 160px !important;
     }
 }
