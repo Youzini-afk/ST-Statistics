@@ -841,9 +841,10 @@ export function setupDashboardEvents(refreshCallback) {
         }
     });
 
-    // Click outside to close
-    $overlay.off('click').on('click', function(e) {
-        if (e.target === this || e.target.id === 'stats-content-wrapper') {
+    // Click outside to close - must be last and use specific target check
+    $overlay.off('click', '.stats-overlay-backdrop').on('click', function(e) {
+        // Only close if clicking directly on overlay background, not on dashboard content
+        if ($(e.target).closest('.stats-dashboard').length === 0) {
             closeOverlay();
         }
     });
