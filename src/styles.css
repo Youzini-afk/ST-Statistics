@@ -2,10 +2,10 @@
     --st-primary: #8b5cf6; /* Violet-500 */
     --st-primary-rgb: 139, 92, 246;
     --st-primary-glow: rgba(139, 92, 246, 0.4);
-    --st-bg-color: rgba(20, 21, 25, 0.9);
-    --st-overlay-bg: rgba(5, 5, 8, 0.8);
+    --st-bg-color: rgba(20, 21, 25, 0.95); /* Neutral dark background for all themes */
+    --st-overlay-bg: rgba(0, 0, 0, 0.75); /* Neutral overlay */
     --st-card-bg: rgba(255, 255, 255, 0.05);
-    --st-card-border: rgba(139, 92, 246, 0.15);
+    --st-card-border: rgba(139, 92, 246, 0.3);
     --st-text-color: #f3f4f6;
     --st-text-muted: #9ca3af;
     --st-heatmap-level-1: rgba(139, 92, 246, 0.3);
@@ -19,10 +19,7 @@
     --st-primary: #8b5cf6;
     --st-primary-rgb: 139, 92, 246;
     --st-primary-glow: rgba(139, 92, 246, 0.4);
-    --st-bg-color: rgba(20, 21, 30, 0.9);
-    --st-overlay-bg: rgba(5, 5, 10, 0.8);
-    --st-card-bg: rgba(139, 92, 246, 0.05);
-    --st-card-border: rgba(139, 92, 246, 0.15);
+    --st-card-border: rgba(139, 92, 246, 0.3);
     --st-heatmap-level-1: rgba(139, 92, 246, 0.3);
     --st-heatmap-level-2: rgba(139, 92, 246, 0.5);
     --st-heatmap-level-3: rgba(139, 92, 246, 0.7);
@@ -34,10 +31,7 @@
     --st-primary: #3b82f6;
     --st-primary-rgb: 59, 130, 246;
     --st-primary-glow: rgba(59, 130, 246, 0.4);
-    --st-bg-color: rgba(15, 23, 42, 0.95);
-    --st-overlay-bg: rgba(2, 6, 23, 0.85);
-    --st-card-bg: rgba(59, 130, 246, 0.05);
-    --st-card-border: rgba(59, 130, 246, 0.2);
+    --st-card-border: rgba(59, 130, 246, 0.3);
     --st-heatmap-level-1: rgba(59, 130, 246, 0.3);
     --st-heatmap-level-2: rgba(59, 130, 246, 0.5);
     --st-heatmap-level-3: rgba(59, 130, 246, 0.7);
@@ -49,10 +43,7 @@
     --st-primary: #10b981;
     --st-primary-rgb: 16, 185, 129;
     --st-primary-glow: rgba(16, 185, 129, 0.4);
-    --st-bg-color: rgba(6, 28, 20, 0.95);
-    --st-overlay-bg: rgba(2, 20, 10, 0.85);
-    --st-card-bg: rgba(16, 185, 129, 0.05);
-    --st-card-border: rgba(16, 185, 129, 0.2);
+    --st-card-border: rgba(16, 185, 129, 0.3);
     --st-heatmap-level-1: rgba(16, 185, 129, 0.3);
     --st-heatmap-level-2: rgba(16, 185, 129, 0.5);
     --st-heatmap-level-3: rgba(16, 185, 129, 0.7);
@@ -64,10 +55,7 @@
     --st-primary: #f59e0b;
     --st-primary-rgb: 245, 158, 11;
     --st-primary-glow: rgba(245, 158, 11, 0.4);
-    --st-bg-color: rgba(30, 20, 5, 0.95);
-    --st-overlay-bg: rgba(20, 10, 0, 0.85);
-    --st-card-bg: rgba(245, 158, 11, 0.05);
-    --st-card-border: rgba(245, 158, 11, 0.2);
+    --st-card-border: rgba(245, 158, 11, 0.3);
     --st-heatmap-level-1: rgba(245, 158, 11, 0.3);
     --st-heatmap-level-2: rgba(245, 158, 11, 0.5);
     --st-heatmap-level-3: rgba(245, 158, 11, 0.7);
@@ -79,10 +67,7 @@
     --st-primary: #f43f5e;
     --st-primary-rgb: 244, 63, 94;
     --st-primary-glow: rgba(244, 63, 94, 0.4);
-    --st-bg-color: rgba(30, 5, 15, 0.95);
-    --st-overlay-bg: rgba(20, 0, 5, 0.85);
-    --st-card-bg: rgba(244, 63, 94, 0.05);
-    --st-card-border: rgba(244, 63, 94, 0.2);
+    --st-card-border: rgba(244, 63, 94, 0.3);
     --st-heatmap-level-1: rgba(244, 63, 94, 0.3);
     --st-heatmap-level-2: rgba(244, 63, 94, 0.5);
     --st-heatmap-level-3: rgba(244, 63, 94, 0.7);
