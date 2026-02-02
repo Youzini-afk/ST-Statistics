@@ -249,12 +249,13 @@ export function initCharts(stats) {
 /**
  * Generate full statistics dashboard HTML
  */
-export function generateDashboardHTML(stats, character) {
+export function generateDashboardHTML(stats, character, isGlobalMode = false) {
+    const title = isGlobalMode ? '全部角色统计' : character.name;
     return `
         <div class="stats-dashboard">
             <div class="stats-header-row">
                 <div class="stats-title-group">
-                    <h3><i class="fa-solid fa-chart-simple"></i> 统计报告: ${character.name}</h3>
+                    <h3><i class="fa-solid fa-chart-simple"></i> 统计报告: ${title}</h3>
                     <small>${stats.overview.firstDate} - ${stats.overview.lastDate}</small>
                 </div>
                 

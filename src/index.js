@@ -5,7 +5,7 @@
 import './styles.css';
 import { Logger } from './logger.js';
 import { CONFIG } from './config.js';
-import { fetchAllChats } from './api.js';
+import { fetchAllChats, fetchAllCharactersChats } from './api.js';
 import { analyzeChats } from './analyzer.js';
 import { showOverlay, generateDashboardHTML, setupDashboardEvents, closeOverlay, initCharts } from './ui.js';
 
@@ -28,8 +28,10 @@ let currentAbortController = null;
 
 /**
  * Generate and display statistics report
+ * @param {boolean} forceRefresh - Force refresh data
+ * @param {boolean} globalMode - Generate global stats for all characters
  */
-async function generateReport(forceRefresh = false) {
+async function generateReport(forceRefresh = false, globalMode = false) {
     // Cancel any existing operation
     if (currentAbortController) {
         currentAbortController.abort();
@@ -40,28 +42,36 @@ async function generateReport(forceRefresh = false) {
     const context = globalThis.SillyTavern.getContext();
     const characterId = context.characterId;
 
-    if (characterId == null) {
-        toastr.warning('请先选择一个角色并进入聊天界面！', 'Stats');
-        return;
+    // Determine mode: if no character selected, use global mode
+    const isGlobalMode = globalMode || characterId == null;
+
+    let character = null;
+    let avatarUrl = null;
+    let cacheKey = null;
+
+    if (!isGlobalMode) {
+        character = context.characters[characterId];
+        if (!character) {
+            toastr.error('无法获取角色信息。', 'Stats');
+            return;
+        }
+        avatarUrl = character.avatar;
+        cacheKey = characterId;
+    } else {
+        cacheKey = '__global__';
     }
 
-    const character = context.characters[characterId];
-    if (!character) {
-        toastr.error('无法获取角色信息。', 'Stats');
-        return;
-    }
-
-    const avatarUrl = character.avatar;
+    const reportTitle = isGlobalMode ? '全部角色统计' : character.name;
 
     // Check cache
-    if (!forceRefresh && settings.cache && settings.cache[characterId]) {
-        logger.log(`Using cached stats for ${character.name}`);
-        const cachedStats = settings.cache[characterId];
-        const dashboardHTML = generateDashboardHTML(cachedStats, character);
+    if (!forceRefresh && settings.cache && settings.cache[cacheKey]) {
+        logger.log(`Using cached stats for ${reportTitle}`);
+        const cachedStats = settings.cache[cacheKey];
+        const dashboardHTML = generateDashboardHTML(cachedStats, isGlobalMode ? null : character, isGlobalMode);
         showOverlay(dashboardHTML);
         // Initialize charts for cached data
         initCharts(cachedStats);
-        setupDashboardEvents(generateReport);
+        setupDashboardEvents(() => generateReport(false, isGlobalMode));
         toastr.success('已加载缓存的统计报告。', 'Stats');
         return;
     }
@@ -80,7 +90,7 @@ async function generateReport(forceRefresh = false) {
                     <i class="fa-solid fa-xmark"></i>
                 </div>
             </div>
-            <h3><i class="fa-solid fa-chart-simple"></i> 正在分析: ${character.name}</h3>
+            <h3><i class="fa-solid fa-chart-simple"></i> 正在分析: ${reportTitle}</h3>
             <div id="stats-progress-area" style="text-align: center; width: 100%; max-width: 600px;">
                 <p id="stats-status-text" style="margin-bottom: 10px;">正在扫描聊天记录...</p>
                 <progress id="stats-progress-bar" value="0" max="100" style="width: 100%; height: 20px;"></progress>
@@ -99,22 +109,36 @@ async function generateReport(forceRefresh = false) {
     });
 
     try {
-        // Progress callback
-        const onProgress = (current, total) => {
-            if (total > 5) {
-                const percentage = Math.round((current / total) * 100);
-                $('#stats-progress-bar').val(percentage);
-                $('#stats-count-text').text(`${current} / ${total}`);
-                $('#stats-status-text').text(`正在读取: ${percentage}%`);
-            } else {
-                $('#stats-status-text').text('正在读取数据...');
-            }
-        };
+        let chatsData;
 
-        // Fetch all chats
-        const chatsData = await fetchAllChats(avatarUrl, onProgress, abortSignal);
+        if (isGlobalMode) {
+            // Progress callback for global mode
+            const onProgress = (currentChar, totalChars, totalChats) => {
+                const percentage = Math.round((currentChar / totalChars) * 100);
+                $('#stats-progress-bar').val(percentage);
+                $('#stats-count-text').text(`角色 ${currentChar} / ${totalChars}，共 ${totalChats} 个聊天`);
+                $('#stats-status-text').text(`正在扫描所有角色: ${percentage}%`);
+            };
+
+            chatsData = await fetchAllCharactersChats(onProgress, abortSignal);
+        } else {
+            // Progress callback for single character
+            const onProgress = (current, total) => {
+                if (total > 5) {
+                    const percentage = Math.round((current / total) * 100);
+                    $('#stats-progress-bar').val(percentage);
+                    $('#stats-count-text').text(`${current} / ${total}`);
+                    $('#stats-status-text').text(`正在读取: ${percentage}%`);
+                } else {
+                    $('#stats-status-text').text('正在读取数据...');
+                }
+            };
+
+            chatsData = await fetchAllChats(avatarUrl, onProgress, abortSignal);
+        }
 
         if (chatsData.length === 0) {
+            const emptyMessage = isGlobalMode ? '没有找到任何聊天记录。' : '该角色没有找到任何聊天记录。';
             $('#stats-content-wrapper').html(`
                 <div class="stats-dashboard" style="justify-content: center; align-items: center; min-height: 200px;">
                     <div class="stats-actions">
@@ -130,7 +154,7 @@ async function generateReport(forceRefresh = false) {
                     </div>
                     <div style="text-align: center;">
                         <i class="fa-solid fa-circle-exclamation fa-3x" style="color: #ffcc00; margin-bottom: 15px;"></i>
-                        <p>该角色没有找到任何聊天记录。</p>
+                        <p>${emptyMessage}</p>
                     </div>
                 </div>
             `);
@@ -147,7 +171,7 @@ async function generateReport(forceRefresh = false) {
         if (!settings.cache) {
             settings.cache = {};
         }
-        settings.cache[characterId] = stats;
+        settings.cache[cacheKey] = stats;
         
         // Save settings
         if (globalThis.SillyTavern.saveSettingsDebounced) {
@@ -155,11 +179,11 @@ async function generateReport(forceRefresh = false) {
         }
 
         // Display dashboard
-        const dashboardHTML = generateDashboardHTML(stats, character);
+        const dashboardHTML = generateDashboardHTML(stats, isGlobalMode ? null : character, isGlobalMode);
         $('#stats-content-wrapper').html(dashboardHTML);
         // Initialize charts for fresh data
         initCharts(stats);
-        setupDashboardEvents(generateReport);
+        setupDashboardEvents(() => generateReport(false, isGlobalMode));
 
         toastr.success('统计报告生成完毕！', 'Stats');
 
@@ -228,9 +252,12 @@ function addSettingsPanel() {
                     <div class="inline-drawer-icon fa-solid fa-chart-bar down"></div>
                 </div>
                 <div class="inline-drawer-content stats-drawer">
-                    <p>点击下方按钮分析当前角色的所有聊天记录。</p>
+                    <p>分析聊天记录并生成统计报告。</p>
                     <button id="${CONFIG.ANALYZE_BUTTON_ID}" class="menu_button">
-                        <i class="fa-solid fa-calculator"></i> 生成统计报告
+                        <i class="fa-solid fa-calculator"></i> 当前角色统计
+                    </button>
+                    <button id="${CONFIG.ANALYZE_BUTTON_ID}_global" class="menu_button" style="margin-top: 5px;">
+                        <i class="fa-solid fa-globe"></i> 全部角色统计
                     </button>
                 </div>
             </div>
@@ -238,7 +265,8 @@ function addSettingsPanel() {
     `;
 
     $('#extensions_settings').append(panelHTML);
-    $(`#${CONFIG.ANALYZE_BUTTON_ID}`).on('click', () => generateReport(false));
+    $(`#${CONFIG.ANALYZE_BUTTON_ID}`).on('click', () => generateReport(false, false));
+    $(`#${CONFIG.ANALYZE_BUTTON_ID}_global`).on('click', () => generateReport(false, true));
 }
 
 /**

@@ -141,3 +141,99 @@ export async function fetchAllChats(avatarUrl, onProgress, abortSignal) {
         throw error;
     }
 }
+
+/**
+ * Fetch all chat files for all characters
+ */
+export async function fetchAllCharactersChats(onProgress, abortSignal) {
+    const context = globalThis.SillyTavern.getContext();
+    const characters = context.characters;
+    
+    if (!characters || characters.length === 0) {
+        logger.warn('No characters found.');
+        return [];
+    }
+
+    logger.log(`Fetching chats for ${characters.length} characters.`);
+    
+    const allChats = [];
+    let processedChars = 0;
+    let totalChatsFound = 0;
+
+    for (const character of characters) {
+        if (abortSignal?.aborted) {
+            throw new Error('Operation cancelled');
+        }
+
+        const avatarUrl = character.avatar;
+        if (!avatarUrl) continue;
+
+        try {
+            // Search for chats of this character
+            const searchResponse = await fetch('/api/chats/search', {
+                method: 'POST',
+                headers: context.getRequestHeaders(),
+                body: JSON.stringify({
+                    avatar_url: avatarUrl,
+                    query: ''
+                }),
+                signal: abortSignal
+            });
+
+            if (!searchResponse.ok) {
+                processedChars++;
+                continue;
+            }
+
+            const chatList = await searchResponse.json();
+            
+            // Fetch chat contents
+            for (const chatMeta of chatList) {
+                if (abortSignal?.aborted) {
+                    throw new Error('Operation cancelled');
+                }
+
+                const fileName = chatMeta.file_name.replace('.jsonl', '');
+                
+                try {
+                    const response = await fetch('/api/chats/get', {
+                        method: 'POST',
+                        headers: context.getRequestHeaders(),
+                        body: JSON.stringify({
+                            avatar_url: avatarUrl,
+                            file_name: fileName
+                        }),
+                        signal: abortSignal
+                    });
+
+                    if (response.ok) {
+                        const messages = await response.json();
+                        allChats.push({
+                            metadata: { ...chatMeta, character_name: character.name },
+                            messages: messages
+                        });
+                        totalChatsFound++;
+                    }
+                } catch (error) {
+                    if (error.name === 'AbortError') throw error;
+                    // Continue on individual chat errors
+                }
+            }
+
+        } catch (error) {
+            if (error.name === 'AbortError' || error.message === 'Operation cancelled') {
+                throw error;
+            }
+            logger.warn(`Error fetching chats for ${character.name}:`, error);
+        }
+
+        processedChars++;
+        
+        if (onProgress) {
+            onProgress(processedChars, characters.length, totalChatsFound);
+        }
+    }
+
+    logger.log(`Total chats found across all characters: ${allChats.length}`);
+    return allChats;
+}
