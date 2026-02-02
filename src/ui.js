@@ -82,8 +82,14 @@ export function initCharts(stats, themeKey = 'violet') {
 
     // 1. Timeline Chart (Bar Chart for Daily Activity)
     const ctxTimeline = document.getElementById('timelineChart');
-    if (ctxTimeline && stats.overview.firstDateISO) {
-        const firstDateObj = new Date(stats.overview.firstDateISO);
+    // Try ISO format first, fall back to dailyActivity keys
+    let firstDateStr = stats.overview.firstDateISO;
+    if (!firstDateStr && stats.dailyActivity) {
+        const sortedDates = Object.keys(stats.dailyActivity).sort();
+        if (sortedDates.length > 0) firstDateStr = sortedDates[0];
+    }
+    if (ctxTimeline && firstDateStr) {
+        const firstDateObj = new Date(firstDateStr);
         if (!isNaN(firstDateObj.getTime())) {
             const dates = [];
             let currentDate = new Date(firstDateObj);
@@ -391,9 +397,13 @@ export function initCharts(stats, themeKey = 'violet') {
     // 6. Daily Duration Bar Chart
     const ctxDailyDuration = document.getElementById('dailyDurationChart');
     if (ctxDailyDuration && stats.dailyDuration) {
-        // Generate all dates from first to last using ISO format
-        const firstDateISO = stats.overview.firstDateISO;
-        const firstDateObj = firstDateISO ? new Date(firstDateISO) : null;
+        // Generate all dates from first to last using ISO format, fall back to dailyDuration keys
+        let durationFirstDateStr = stats.overview.firstDateISO;
+        if (!durationFirstDateStr && stats.dailyDuration) {
+            const sortedDates = Object.keys(stats.dailyDuration).sort();
+            if (sortedDates.length > 0) durationFirstDateStr = sortedDates[0];
+        }
+        const firstDateObj = durationFirstDateStr ? new Date(durationFirstDateStr) : null;
         
         if (firstDateObj && !isNaN(firstDateObj.getTime())) {
             const dates = [];
