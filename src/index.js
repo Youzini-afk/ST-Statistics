@@ -76,6 +76,33 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
 
     const reportTitle = isGlobalMode ? '全部角色统计' : character.name;
 
+    // Backup cache key for localStorage fallback
+    const CACHE_BACKUP_KEY = 'ST_Stats_CacheBackup';
+
+    // Save to localStorage as backup
+    const saveToLocalStorage = (cacheData) => {
+        try {
+            const backup = JSON.parse(localStorage.getItem(CACHE_BACKUP_KEY) || '{}');
+            backup[cacheKey] = cacheData;
+            backup.__index = backup.__index || {};
+            backup.__index[baseCacheKey] = cacheKey;
+            localStorage.setItem(CACHE_BACKUP_KEY, JSON.stringify(backup));
+            logger.log('Cache backed up to localStorage');
+        } catch (e) {
+            logger.error('localStorage backup failed:', e);
+        }
+    };
+
+    // Load from localStorage backup
+    const loadFromLocalStorage = () => {
+        try {
+            const backup = JSON.parse(localStorage.getItem(CACHE_BACKUP_KEY) || '{}');
+            return backup;
+        } catch (e) {
+            return {};
+        }
+    };
+
     // Get save function from context
     const saveSettingsNow = () => {
         try {
@@ -148,6 +175,38 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
             candidateKeys.sort((a, b) => (settings.cache[b].updatedAt || 0) - (settings.cache[a].updatedAt || 0));
             cachedEntry = settings.cache[candidateKeys[0]];
             cacheKey = candidateKeys[0];
+        }
+    }
+
+    // Try localStorage backup if no valid cache found or dailyDuration is empty
+    if (!forceRefresh && cachedEntry) {
+        const hasDailyDuration = cachedEntry.stats?.dailyDuration && Object.keys(cachedEntry.stats.dailyDuration).length > 0;
+        if (!hasDailyDuration) {
+            logger.log('Cache has empty dailyDuration, trying localStorage backup...');
+            const backup = loadFromLocalStorage();
+            const backupKey = backup.__index?.[baseCacheKey] || cacheKey;
+            if (backup[backupKey] && backup[backupKey].stats?.dailyDuration && Object.keys(backup[backupKey].stats.dailyDuration).length > 0) {
+                logger.log(`Found valid backup in localStorage for ${backupKey}`);
+                cachedEntry = backup[backupKey];
+                cacheKey = backupKey;
+                // Restore to settings cache
+                settings.cache[cacheKey] = cachedEntry;
+            }
+        }
+    }
+
+    // If still no cache, try localStorage directly
+    if (!forceRefresh && !cachedEntry) {
+        logger.log('No cache in settings, trying localStorage backup...');
+        const backup = loadFromLocalStorage();
+        const backupKey = backup.__index?.[baseCacheKey];
+        if (backupKey && backup[backupKey]) {
+            logger.log(`Found backup in localStorage for ${backupKey}`);
+            cachedEntry = backup[backupKey];
+            cacheKey = backupKey;
+            // Restore to settings cache
+            if (!settings.cache) settings.cache = {};
+            settings.cache[cacheKey] = cachedEntry;
         }
     }
 
@@ -303,7 +362,8 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
         if (!settings.cache) {
             settings.cache = {};
         }
-        settings.cache[cacheKey] = { stats, dateRange: normalizedRange, dateBounds, updatedAt: Date.now() };
+        const cacheData = { stats, dateRange: normalizedRange, dateBounds, updatedAt: Date.now() };
+        settings.cache[cacheKey] = cacheData;
         if (!settings.cacheIndex) {
             settings.cacheIndex = {};
         }
@@ -311,6 +371,9 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
         
         // Log cache data for debugging
         logger.log(`Caching stats for ${cacheKey}, totalDuration: ${stats.overview?.totalDurationMinutes}m, dailyDuration keys: ${Object.keys(stats.dailyDuration || {}).length}`);
+        
+        // Save to localStorage as reliable backup
+        saveToLocalStorage(cacheData);
         
         // Save settings
         saveSettingsNow();
