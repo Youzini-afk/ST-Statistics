@@ -88,12 +88,19 @@ export function analyzeChats(chatsData) {
     const dailyActivity = {};
     const dailyFileCounts = {};
     const hourlyActivity = new Array(24).fill(0);
+    const characterStats = {}; // 角色消息统计
 
     const totalChats = chatsData.length;
 
     chatsData.forEach(chat => {
         const fileName = chat.metadata.file_name;
         const messageCount = chat.messages.length;
+        const characterName = chat.metadata.character_name || '未知角色';
+
+        // 统计角色消息数（只统计有对话的，即消息数 > 0）
+        if (messageCount > 0) {
+            characterStats[characterName] = (characterStats[characterName] || 0) + messageCount;
+        }
 
         if (messageCount > maxMessagesInOneChat) {
             maxMessagesInOneChat = messageCount;
@@ -176,6 +183,7 @@ export function analyzeChats(chatsData) {
         models: modelUsage,
         dailyActivity,
         dailyFileCounts: dailyFileCountsObj,
-        hourlyActivity
+        hourlyActivity,
+        characterStats
     };
 }

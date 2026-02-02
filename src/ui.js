@@ -243,6 +243,61 @@ export function initCharts(stats) {
             }
         });
     }
+
+    // 4. Character Ranking (Horizontal Bar Chart - Global Mode Only)
+    const ctxCharRanking = document.getElementById('characterRankingChart');
+    if (ctxCharRanking && stats.characterStats) {
+        // 按消息数排序，取前 20 个
+        const charEntries = Object.entries(stats.characterStats)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 20);
+        
+        const charLabels = charEntries.map(e => e[0]);
+        const charData = charEntries.map(e => e[1]);
+
+        charts.charRanking = new Chart(ctxCharRanking, {
+            type: 'bar',
+            data: {
+                labels: charLabels,
+                datasets: [{
+                    label: '消息数',
+                    data: charData,
+                    backgroundColor: 'rgba(139, 92, 246, 0.7)',
+                    borderColor: 'rgba(139, 92, 246, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y', // 横向柱状图
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: (items) => items[0].label,
+                            label: (item) => `消息数: ${item.raw.toLocaleString()}`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#9ca3af' },
+                        beginAtZero: true
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: {
+                            color: '#e5e7eb',
+                            font: { size: 11 }
+                        }
+                    }
+                }
+            }
+        });
+    }
 }
 
 
@@ -351,6 +406,19 @@ export function generateDashboardHTML(stats, character, isGlobalMode = false) {
                     </div>
                 </div>
             </div>
+
+            ${isGlobalMode ? `
+            <!-- Character Ranking (Global Mode Only) -->
+            <div class="stats-card" style="margin-top: 20px;">
+                <div class="card-header-row">
+                    <h4><i class="fa-solid fa-ranking-star"></i> 角色消息排行</h4>
+                    <i class="fa-solid fa-chevron-up card-toggle-btn"></i>
+                </div>
+                <div class="card-content" style="height: 400px; position: relative;">
+                    <canvas id="characterRankingChart"></canvas>
+                </div>
+            </div>
+            ` : ''}
         </div>
     `;
 }
