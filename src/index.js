@@ -127,6 +127,15 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
         return;
     }
 
+    // Clear cache if force refresh
+    if (forceRefresh && settings.cache && settings.cache[cacheKey]) {
+        logger.log(`Clearing cache for ${reportTitle}`);
+        delete settings.cache[cacheKey];
+        if (globalThis.SillyTavern.saveSettingsDebounced) {
+            globalThis.SillyTavern.saveSettingsDebounced();
+        }
+    }
+
     // Show loading overlay
     showOverlay(`
         <div id="stats-container" class="stats-dashboard" style="min-height: 300px; justify-content: center; align-items: center;">
