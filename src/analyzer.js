@@ -95,6 +95,7 @@ export function analyzeChats(chatsData, options = {}) {
     const hourlyActivity = new Array(24).fill(0);
     const characterStats = {}; // 角色消息统计
     const dailyDuration = {}; // 每日时长统计 (分钟)
+    const dailyTimestamps = {}; // 每日消息时间戳
 
     let totalChats = 0;
 
@@ -102,9 +103,6 @@ export function analyzeChats(chatsData, options = {}) {
         const fileName = chat.metadata.file_name;
         const characterName = chat.metadata.character_name || '未知角色';
         let messageCountInRange = 0;
-        
-        // Track session times per day for duration calculation
-        const sessionsByDay = {}; // { 'YYYY-MM-DD': [{ start, end }] }
 
         chat.messages.forEach(msg => {
             const date = parseDate(msg.send_date);
@@ -120,14 +118,11 @@ export function analyzeChats(chatsData, options = {}) {
 
                 const dateKey = date.toISOString().split('T')[0];
                 dailyActivity[dateKey] = (dailyActivity[dateKey] || 0) + 1;
-                
-                // Track session for duration
-                if (!sessionsByDay[dateKey]) {
-                    sessionsByDay[dateKey] = { first: date, last: date };
-                } else {
-                    if (date < sessionsByDay[dateKey].first) sessionsByDay[dateKey].first = date;
-                    if (date > sessionsByDay[dateKey].last) sessionsByDay[dateKey].last = date;
+
+                if (!dailyTimestamps[dateKey]) {
+                    dailyTimestamps[dateKey] = [];
                 }
+                dailyTimestamps[dateKey].push(date.getTime());
 
                 if (!dailyFileCounts[dateKey]) {
                     dailyFileCounts[dateKey] = new Set();
@@ -169,17 +164,34 @@ export function analyzeChats(chatsData, options = {}) {
             if (messageCountInRange > maxMessagesInOneChat) {
                 maxMessagesInOneChat = messageCountInRange;
             }
-            
-            // Calculate session duration for each day
-            for (const [dayKey, session] of Object.entries(sessionsByDay)) {
-                const durationMinutes = Math.round((session.last - session.first) / (1000 * 60));
-                // Only count if there was actual activity (at least 1 minute or multiple messages)
-                if (durationMinutes >= 0) {
-                    dailyDuration[dayKey] = (dailyDuration[dayKey] || 0) + durationMinutes;
-                }
-            }
         }
     });
+
+    // Calculate daily duration based on session gaps (30 minutes)
+    const SESSION_GAP_MS = 30 * 60 * 1000;
+    for (const [dayKey, timestamps] of Object.entries(dailyTimestamps)) {
+        if (!timestamps.length) continue;
+        timestamps.sort((a, b) => a - b);
+
+        let sessionStart = timestamps[0];
+        let prev = timestamps[0];
+        let minutes = 0;
+
+        for (let i = 1; i < timestamps.length; i++) {
+            const current = timestamps[i];
+            if (current - prev <= SESSION_GAP_MS) {
+                prev = current;
+                continue;
+            }
+            minutes += (prev - sessionStart) / (1000 * 60);
+            sessionStart = current;
+            prev = current;
+        }
+
+        minutes += (prev - sessionStart) / (1000 * 60);
+        if (minutes < 1) minutes = 1;
+        dailyDuration[dayKey] = Math.round(minutes);
+    }
 
     // Calculate user tokens: Chinese ~1.5 chars per token
     const userTokens = Math.ceil(userCharCount / 1.5);
