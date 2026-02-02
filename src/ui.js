@@ -327,6 +327,146 @@ export function initCharts(stats, themeKey = 'violet') {
             }
         });
     }
+
+    // 5. Duration Gauge Chart (Doughnut)
+    const ctxDurationGauge = document.getElementById('durationGaugeChart');
+    if (ctxDurationGauge && stats.overview.totalDurationMinutes !== undefined) {
+        const totalMinutes = stats.overview.totalDurationMinutes || 0;
+        const hours = Math.floor(totalMinutes / 60);
+        const mins = totalMinutes % 60;
+        const displayText = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+
+        // Create a gauge-style doughnut chart
+        charts.durationGauge = new Chart(ctxDurationGauge, {
+            type: 'doughnut',
+            data: {
+                labels: ['已使用时长', ''],
+                datasets: [{
+                    data: [totalMinutes, Math.max(0, 100 - (totalMinutes % 100))], // Visual gauge effect
+                    backgroundColor: [
+                        `rgba(${colorRGB}, 0.9)`,
+                        'rgba(255, 255, 255, 0.05)'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%',
+                rotation: -90,
+                circumference: 180,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                }
+            },
+            plugins: [{
+                id: 'centerText',
+                afterDraw: (chart) => {
+                    const ctx = chart.ctx;
+                    const centerX = (chart.chartArea.left + chart.chartArea.right) / 2;
+                    const centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2 + 20;
+                    
+                    ctx.save();
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    
+                    // Main value
+                    ctx.font = 'bold 28px Inter, sans-serif';
+                    ctx.fillStyle = colorHex;
+                    ctx.fillText(displayText, centerX, centerY - 10);
+                    
+                    // Label
+                    ctx.font = '12px Inter, sans-serif';
+                    ctx.fillStyle = '#9ca3af';
+                    ctx.fillText('总计时长', centerX, centerY + 20);
+                    
+                    ctx.restore();
+                }
+            }]
+        });
+    }
+
+    // 6. Daily Duration Bar Chart
+    const ctxDailyDuration = document.getElementById('dailyDurationChart');
+    if (ctxDailyDuration && stats.dailyDuration) {
+        // Generate all dates from first to last
+        const firstDateObj = stats.overview.firstDate && stats.overview.firstDate !== 'N/A' 
+            ? new Date(stats.overview.firstDate) 
+            : null;
+        
+        if (firstDateObj && !isNaN(firstDateObj.getTime())) {
+            const dates = [];
+            let currentDate = new Date(firstDateObj);
+            const endDate = new Date();
+            
+            let safety = 0;
+            while (currentDate <= endDate && safety < 10000) {
+                dates.push(currentDate.toISOString().split('T')[0]);
+                currentDate.setDate(currentDate.getDate() + 1);
+                safety++;
+            }
+
+            const durationData = dates.map(date => stats.dailyDuration[date] || 0);
+
+            charts.dailyDuration = new Chart(ctxDailyDuration, {
+                type: 'bar',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: '每日时长(分钟)',
+                        data: durationData,
+                        backgroundColor: `rgba(${colorRGB}, 0.6)`,
+                        borderColor: `rgba(${colorRGB}, 1)`,
+                        borderWidth: 1,
+                        borderRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => items[0].label,
+                                label: (item) => {
+                                    const mins = item.raw;
+                                    if (mins >= 60) {
+                                        return `${Math.floor(mins / 60)}小时 ${mins % 60}分钟`;
+                                    }
+                                    return `${mins}分钟`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                color: '#9ca3af',
+                                maxRotation: 0,
+                                autoSkip: true,
+                                maxTicksLimit: 15
+                            }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: {
+                                color: '#9ca3af',
+                                callback: (value) => {
+                                    if (value >= 60) return `${Math.floor(value / 60)}h`;
+                                    return `${value}m`;
+                                }
+                            },
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+    }
 }
 
 
@@ -436,6 +576,31 @@ export function generateDashboardHTML(stats, character, isGlobalMode = false, th
                 </div>
                 <div class="card-content" style="height: 320px; position: relative;">
                     <canvas id="timelineChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Duration Stats -->
+            <div style="display: grid; grid-template-columns: 300px 1fr; gap: 20px;">
+                <!-- Total Duration Gauge -->
+                <div class="stats-card">
+                    <div class="card-header-row">
+                        <h4><i class="fa-solid fa-hourglass-half"></i> 总时长</h4>
+                        <i class="fa-solid fa-chevron-up card-toggle-btn"></i>
+                    </div>
+                    <div class="card-content" style="display: flex; justify-content: center; align-items: center; height: 260px; position: relative;">
+                        <canvas id="durationGaugeChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Daily Duration Bar Chart -->
+                <div class="stats-card">
+                    <div class="card-header-row">
+                        <h4><i class="fa-solid fa-clock-rotate-left"></i> 每日时长统计 (从开始至今)</h4>
+                        <i class="fa-solid fa-chevron-up card-toggle-btn"></i>
+                    </div>
+                    <div class="card-content" style="height: 260px; position: relative;">
+                        <canvas id="dailyDurationChart"></canvas>
+                    </div>
                 </div>
             </div>
 

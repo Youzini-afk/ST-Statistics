@@ -94,6 +94,7 @@ export function analyzeChats(chatsData, options = {}) {
     const dailyFileCounts = {};
     const hourlyActivity = new Array(24).fill(0);
     const characterStats = {}; // 角色消息统计
+    const dailyDuration = {}; // 每日时长统计 (分钟)
 
     let totalChats = 0;
 
@@ -101,6 +102,9 @@ export function analyzeChats(chatsData, options = {}) {
         const fileName = chat.metadata.file_name;
         const characterName = chat.metadata.character_name || '未知角色';
         let messageCountInRange = 0;
+        
+        // Track session times per day for duration calculation
+        const sessionsByDay = {}; // { 'YYYY-MM-DD': [{ start, end }] }
 
         chat.messages.forEach(msg => {
             const date = parseDate(msg.send_date);
@@ -116,6 +120,14 @@ export function analyzeChats(chatsData, options = {}) {
 
                 const dateKey = date.toISOString().split('T')[0];
                 dailyActivity[dateKey] = (dailyActivity[dateKey] || 0) + 1;
+                
+                // Track session for duration
+                if (!sessionsByDay[dateKey]) {
+                    sessionsByDay[dateKey] = { first: date, last: date };
+                } else {
+                    if (date < sessionsByDay[dateKey].first) sessionsByDay[dateKey].first = date;
+                    if (date > sessionsByDay[dateKey].last) sessionsByDay[dateKey].last = date;
+                }
 
                 if (!dailyFileCounts[dateKey]) {
                     dailyFileCounts[dateKey] = new Set();
@@ -157,6 +169,15 @@ export function analyzeChats(chatsData, options = {}) {
             if (messageCountInRange > maxMessagesInOneChat) {
                 maxMessagesInOneChat = messageCountInRange;
             }
+            
+            // Calculate session duration for each day
+            for (const [dayKey, session] of Object.entries(sessionsByDay)) {
+                const durationMinutes = Math.round((session.last - session.first) / (1000 * 60));
+                // Only count if there was actual activity (at least 1 minute or multiple messages)
+                if (durationMinutes >= 0) {
+                    dailyDuration[dayKey] = (dailyDuration[dayKey] || 0) + durationMinutes;
+                }
+            }
         }
     });
 
@@ -171,6 +192,9 @@ export function analyzeChats(chatsData, options = {}) {
 
     const avgMessagesPerChat = totalChats > 0 ? Math.round(totalMessages / totalChats) : 0;
 
+    // Calculate total duration in minutes
+    const totalDurationMinutes = Object.values(dailyDuration).reduce((sum, mins) => sum + mins, 0);
+
     return {
         overview: {
             totalMessages,
@@ -183,7 +207,8 @@ export function analyzeChats(chatsData, options = {}) {
             ratio: userMessages > 0 ? (aiMessages / userMessages).toFixed(2) : 0,
             firstDate: firstDate ? firstDate.toLocaleDateString() : 'N/A',
             lastDate: lastDate ? lastDate.toLocaleDateString() : 'N/A',
-            daysActive: firstDate && lastDate ? Math.ceil((lastDate - firstDate) / (1000 * 60 * 60 * 24)) : 0
+            daysActive: firstDate && lastDate ? Math.ceil((lastDate - firstDate) / (1000 * 60 * 60 * 24)) : 0,
+            totalDurationMinutes
         },
         tokens: {
             ai: aiTokens,
@@ -192,6 +217,7 @@ export function analyzeChats(chatsData, options = {}) {
         models: modelUsage,
         dailyActivity,
         dailyFileCounts: dailyFileCountsObj,
+        dailyDuration,
         hourlyActivity,
         characterStats
     };
