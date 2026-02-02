@@ -67,10 +67,12 @@ export function initCharts(stats) {
 
     // 1. Timeline Chart (Bar Chart for Daily Activity)
     const ctxTimeline = document.getElementById('timelineChart');
-    if (ctxTimeline) {
-        const dates = [];
-        let currentDate = new Date(stats.overview.firstDate);
-        const endDate = new Date(); // Today
+    if (ctxTimeline && stats.overview.firstDate && stats.overview.firstDate !== 'N/A') {
+        const firstDateObj = new Date(stats.overview.firstDate);
+        if (!isNaN(firstDateObj.getTime())) {
+            const dates = [];
+            let currentDate = firstDateObj;
+            const endDate = new Date(); // Today
         
         let safety = 0;
         while (currentDate <= endDate && safety < 10000) {
@@ -81,53 +83,54 @@ export function initCharts(stats) {
 
         const dataPoints = dates.map(date => stats.dailyActivity[date] || 0);
 
-        charts.timeline = new Chart(ctxTimeline, {
-            type: 'bar',
-            data: {
-                labels: dates,
-                datasets: [{
-                    label: '每日消息数量',
-                    data: dataPoints,
-                    backgroundColor: 'rgba(139, 92, 246, 0.6)',
-                    borderColor: 'rgba(139, 92, 246, 1)',
-                    borderWidth: 1,
-                    barPercentage: 0.8,
-                    categoryPercentage: 0.9,
-                    borderRadius: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        callbacks: {
-                            title: (items) => `日期: ${items[0].label}`,
-                            label: (item) => `消息: ${item.raw}`
-                        }
-                    }
+            charts.timeline = new Chart(ctxTimeline, {
+                type: 'bar',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: '每日消息数量',
+                        data: dataPoints,
+                        backgroundColor: 'rgba(139, 92, 246, 0.6)',
+                        borderColor: 'rgba(139, 92, 246, 1)',
+                        borderWidth: 1,
+                        barPercentage: 0.8,
+                        categoryPercentage: 0.9,
+                        borderRadius: 2
+                    }]
                 },
-                scales: {
-                    x: {
-                        display: true,
-                        grid: { display: false },
-                        ticks: {
-                            color: '#9ca3af',
-                            maxTicksLimit: 12
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                title: (items) => `日期: ${items[0].label}`,
+                                label: (item) => `消息: ${item.raw}`
+                            }
                         }
                     },
-                    y: {
-                        display: true,
-                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                        ticks: { color: '#9ca3af' },
-                        beginAtZero: true
+                    scales: {
+                        x: {
+                            display: true,
+                            grid: { display: false },
+                            ticks: {
+                                color: '#9ca3af',
+                                maxTicksLimit: 12
+                            }
+                        },
+                        y: {
+                            display: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#9ca3af' },
+                            beginAtZero: true
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
     }
 
     // 2. Hourly Activity Chart (Line Chart)
@@ -251,6 +254,8 @@ export function initCharts(stats) {
         const charEntries = Object.entries(stats.characterStats)
             .sort(([, a], [, b]) => b - a)
             .slice(0, 20);
+
+        if (charEntries.length === 0) return;
         
         const charLabels = charEntries.map(e => e[0]);
         const charData = charEntries.map(e => e[1]);
@@ -306,12 +311,29 @@ export function initCharts(stats) {
  */
 export function generateDashboardHTML(stats, character, isGlobalMode = false) {
     const title = isGlobalMode ? '全部角色统计' : character.name;
+    const dateRange = stats.__meta?.dateRange || null;
+    const dateBounds = stats.__meta?.dateBounds || null;
+    const startValue = dateRange?.start || dateBounds?.min || '';
+    const endValue = dateRange?.end || dateBounds?.max || '';
+    const minValue = dateBounds?.min || '';
+    const maxValue = dateBounds?.max || '';
+    const rangeDisplay = stats.overview.firstDate !== 'N/A'
+        ? `${stats.overview.firstDate} - ${stats.overview.lastDate}`
+        : (startValue || endValue ? `${startValue || 'N/A'} - ${endValue || 'N/A'}` : 'N/A');
     return `
         <div class="stats-dashboard">
             <div class="stats-header-row">
                 <div class="stats-title-group">
                     <h3><i class="fa-solid fa-chart-simple"></i> 统计报告: ${title}</h3>
-                    <small>${stats.overview.firstDate} - ${stats.overview.lastDate}</small>
+                    <small>${rangeDisplay}</small>
+                </div>
+
+                <div class="stats-date-range">
+                    <span class="date-range-label">时间范围</span>
+                    <input type="date" class="stats-date-input start-date" value="${startValue}" min="${minValue}" max="${maxValue}" />
+                    <span class="date-range-sep">—</span>
+                    <input type="date" class="stats-date-input end-date" value="${endValue}" min="${minValue}" max="${maxValue}" />
+                    <button class="stats-date-apply">应用</button>
                 </div>
                 
                 <div class="stats-actions">
@@ -504,10 +526,29 @@ export function setupDashboardEvents(refreshCallback) {
         $('#hourly-detail-msg').text(`${count} 消息`);
     });
 
+    const getCurrentDateRange = () => {
+        const start = $('.stats-date-input.start-date').val();
+        const end = $('.stats-date-input.end-date').val();
+        return { start: start || '', end: end || '' };
+    };
+
+    // Apply date range
+    $('#stats-content-wrapper').off('click', '.stats-date-apply').on('click', '.stats-date-apply', function() {
+        const range = getCurrentDateRange();
+        if (range.start && range.end && range.start > range.end) {
+            toastr.error('开始日期不能晚于结束日期。');
+            return;
+        }
+        if (refreshCallback) {
+            refreshCallback(true, range);
+        }
+    });
+
     // Refresh button
     $('.refresh-btn').off('click').on('click', function() {
+        const range = getCurrentDateRange();
         if (refreshCallback) {
-            refreshCallback(true);
+            refreshCallback(true, range);
         }
     });
 

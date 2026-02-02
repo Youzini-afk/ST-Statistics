@@ -6,7 +6,7 @@ import './styles.css';
 import { Logger } from './logger.js';
 import { CONFIG } from './config.js';
 import { fetchAllChats, fetchAllCharactersChats } from './api.js';
-import { analyzeChats } from './analyzer.js';
+import { analyzeChats, parseDate } from './analyzer.js';
 import { showOverlay, generateDashboardHTML, setupDashboardEvents, closeOverlay, initCharts } from './ui.js';
 
 const logger = new Logger('Stats');
@@ -31,7 +31,7 @@ let currentAbortController = null;
  * @param {boolean} forceRefresh - Force refresh data
  * @param {boolean} globalMode - Generate global stats for all characters
  */
-async function generateReport(forceRefresh = false, globalMode = false) {
+async function generateReport(forceRefresh = false, globalMode = false, dateRange = null) {
     // Cancel any existing operation
     if (currentAbortController) {
         currentAbortController.abort();
@@ -61,17 +61,28 @@ async function generateReport(forceRefresh = false, globalMode = false) {
         cacheKey = '__global__';
     }
 
+    const rangeKey = dateRange && (dateRange.start || dateRange.end)
+        ? `__${dateRange.start || ''}_${dateRange.end || ''}`
+        : '';
+    cacheKey = `${cacheKey}${rangeKey}`;
+
     const reportTitle = isGlobalMode ? '全部角色统计' : character.name;
 
     // Check cache
     if (!forceRefresh && settings.cache && settings.cache[cacheKey]) {
         logger.log(`Using cached stats for ${reportTitle}`);
-        const cachedStats = settings.cache[cacheKey];
+        const cachedEntry = settings.cache[cacheKey];
+        const cachedStats = cachedEntry.stats ? cachedEntry.stats : cachedEntry;
+        if (!cachedStats.__meta) {
+            const dateRangeFromCache = cachedEntry.dateRange || dateRange || null;
+            const dateBoundsFromCache = cachedEntry.dateBounds || null;
+            cachedStats.__meta = { dateRange: dateRangeFromCache, dateBounds: dateBoundsFromCache };
+        }
         const dashboardHTML = generateDashboardHTML(cachedStats, isGlobalMode ? null : character, isGlobalMode);
         showOverlay(dashboardHTML);
         // Initialize charts for cached data
         initCharts(cachedStats);
-        setupDashboardEvents(() => generateReport(false, isGlobalMode));
+        setupDashboardEvents((force, range) => generateReport(force, isGlobalMode, range));
         toastr.success('已加载缓存的统计报告。', 'Stats');
         return;
     }
@@ -161,17 +172,43 @@ async function generateReport(forceRefresh = false, globalMode = false) {
             return;
         }
 
+        // Compute date bounds from all chats (for range picker)
+        let minDate = null;
+        let maxDate = null;
+        chatsData.forEach(chat => {
+            chat.messages.forEach(msg => {
+                const date = parseDate(msg.send_date);
+                if (!date) return;
+                if (!minDate || date < minDate) minDate = date;
+                if (!maxDate || date > maxDate) maxDate = date;
+            });
+        });
+
+        const dateBounds = {
+            min: minDate ? minDate.toISOString().split('T')[0] : '',
+            max: maxDate ? maxDate.toISOString().split('T')[0] : ''
+        };
+
+        const normalizedRange = {
+            start: dateRange?.start || dateBounds.min || '',
+            end: dateRange?.end || dateBounds.max || ''
+        };
+
         // Analyze data
         $('#stats-status-text').text('数据读取完毕，正在计算统计指标...');
         await new Promise(resolve => setTimeout(resolve, 50));
 
-        const stats = analyzeChats(chatsData);
+        const stats = analyzeChats(chatsData, {
+            startDate: normalizedRange.start,
+            endDate: normalizedRange.end
+        });
+        stats.__meta = { dateRange: normalizedRange, dateBounds };
 
         // Cache results
         if (!settings.cache) {
             settings.cache = {};
         }
-        settings.cache[cacheKey] = stats;
+        settings.cache[cacheKey] = { stats, dateRange: normalizedRange, dateBounds };
         
         // Save settings
         if (globalThis.SillyTavern.saveSettingsDebounced) {
@@ -183,7 +220,7 @@ async function generateReport(forceRefresh = false, globalMode = false) {
         $('#stats-content-wrapper').html(dashboardHTML);
         // Initialize charts for fresh data
         initCharts(stats);
-        setupDashboardEvents(() => generateReport(false, isGlobalMode));
+        setupDashboardEvents((force, range) => generateReport(force, isGlobalMode, range));
 
         toastr.success('统计报告生成完毕！', 'Stats');
 
@@ -277,7 +314,7 @@ jQuery(async () => {
         // Wait for SillyTavern to be ready
         await new Promise((resolve) => {
             const checkInterval = setInterval(() => {
-                if ($('#extensions_settings').length) {
+                if (globalThis.SillyTavern?.getContext) {
                     clearInterval(checkInterval);
                     resolve();
                 }

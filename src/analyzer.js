@@ -5,7 +5,7 @@
 /**
  * Parse send_date to Date object
  */
-function parseDate(dateString) {
+export function parseDate(dateString) {
     if (!dateString) return null;
 
     // Try standard Date parsing
@@ -72,7 +72,12 @@ function estimateTokenCount(text) {
 /**
  * Analyze all chat data and generate statistics
  */
-export function analyzeChats(chatsData) {
+export function analyzeChats(chatsData, options = {}) {
+    const { startDate, endDate } = options;
+    const start = startDate ? new Date(`${startDate}T00:00:00`) : null;
+    const end = endDate ? new Date(`${endDate}T23:59:59.999`) : null;
+    const hasRange = !!(start || end);
+
     let totalMessages = 0;
     let userMessages = 0;
     let aiMessages = 0;
@@ -90,26 +95,21 @@ export function analyzeChats(chatsData) {
     const hourlyActivity = new Array(24).fill(0);
     const characterStats = {}; // 角色消息统计
 
-    const totalChats = chatsData.length;
+    let totalChats = 0;
 
     chatsData.forEach(chat => {
         const fileName = chat.metadata.file_name;
-        const messageCount = chat.messages.length;
         const characterName = chat.metadata.character_name || '未知角色';
-
-        // 统计角色消息数（只统计有对话的，即消息数 > 0）
-        if (messageCount > 0) {
-            characterStats[characterName] = (characterStats[characterName] || 0) + messageCount;
-        }
-
-        if (messageCount > maxMessagesInOneChat) {
-            maxMessagesInOneChat = messageCount;
-        }
+        let messageCountInRange = 0;
 
         chat.messages.forEach(msg => {
+            const date = parseDate(msg.send_date);
+            const inRange = !hasRange || (date && (!start || date >= start) && (!end || date <= end));
+            if (!inRange) return;
+
+            messageCountInRange++;
             totalMessages++;
 
-            const date = parseDate(msg.send_date);
             if (date) {
                 if (!firstDate || date < firstDate) firstDate = date;
                 if (!lastDate || date > lastDate) lastDate = date;
@@ -149,6 +149,15 @@ export function analyzeChats(chatsData) {
                 }
             }
         });
+
+        if (messageCountInRange > 0) {
+            totalChats++;
+            characterStats[characterName] = (characterStats[characterName] || 0) + messageCountInRange;
+
+            if (messageCountInRange > maxMessagesInOneChat) {
+                maxMessagesInOneChat = messageCountInRange;
+            }
+        }
     });
 
     // Calculate user tokens: Chinese ~1.5 chars per token
