@@ -578,10 +578,11 @@
     color: var(--st-stat-ai) !important;
 }
 
-/* 响应式设计 */
+/* 响应式设计 - 平板 */
 @media (max-width: 768px) {
     .stats-dashboard {
         padding: 15px;
+        gap: 15px;
     }
 
     .stats-metrics-row {
@@ -599,12 +600,223 @@
 
     .stats-header-row {
         flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .stats-title-group {
+        text-align: center;
+    }
+
+    .stats-date-range {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .stats-date-input {
+        width: 120px;
     }
 
     .stats-actions {
+        justify-content: center;
+        gap: 10px;
+    }
+}
+
+/* 响应式设计 - 手机 */
+@media (max-width: 480px) {
+    #stats-overlay {
+        padding: 10px;
+    }
+
+    .stats-dashboard {
+        padding: 12px;
+        gap: 12px;
+        border-radius: 16px;
+    }
+
+    /* 头部区域 */
+    .stats-header-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding-bottom: 12px;
+    }
+
+    .stats-header-row h3 {
+        font-size: 1.1rem;
+        text-align: center;
+    }
+
+    .stats-title-group {
+        text-align: center;
+    }
+
+    .stats-title-group small {
+        font-size: 0.75em;
+    }
+
+    /* 日期范围 - 垂直布局 */
+    .stats-date-range {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
         width: 100%;
-        justify-content: flex-end;
+    }
+
+    .date-range-label {
+        text-align: center;
+    }
+
+    .stats-date-range .date-range-sep {
+        display: none;
+    }
+
+    .stats-date-input {
+        width: 100%;
+        padding: 8px 10px;
+    }
+
+    .stats-date-apply {
+        width: 100%;
+        padding: 10px;
+    }
+
+    /* 操作按钮 - 固定在顶部 */
+    .stats-actions {
+        position: fixed;
+        top: 15px;
+        right: 15px;
+        z-index: 1000;
+        gap: 8px;
+        background: rgba(20, 21, 25, 0.9);
+        padding: 8px;
+        border-radius: 12px;
+        border: 1px solid var(--st-card-border);
+    }
+
+    .stats-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 0.9em;
+    }
+
+    /* 指标网格 - 2x4 布局 */
+    .stats-metrics-row {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px;
+    }
+
+    .metric-item {
+        padding: 12px 8px;
+    }
+
+    .metric-value {
+        font-size: 1.3em !important;
+    }
+
+    .metric-label {
+        font-size: 0.7em;
+    }
+
+    /* 卡片通用样式 */
+    .stats-card {
+        padding: 12px;
+        border-radius: 12px;
+    }
+
+    .card-header-row {
+        margin-bottom: 12px;
+    }
+
+    .card-header-row h4 {
+        font-size: 0.95em;
+    }
+
+    /* 时长统计 - 改为上下布局 */
+    .stats-dashboard > div[style*="grid-template-columns: 300px"] {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+
+    /* 24小时分布 & 模型偏好 - 改为上下布局 */
+    .stats-dashboard > div[style*="grid-template-columns: 1fr 1fr"] {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+
+    /* 图表区域高度优化 */
+    .card-content[style*="min-height: 320px"] {
+        min-height: 200px !important;
+    }
+
+    .card-content[style*="min-height: 260px"] {
+        min-height: 180px !important;
+    }
+
+    .card-content[style*="min-height: 250px"] {
+        min-height: 180px !important;
+    }
+
+    .card-content[style*="min-height: 400px"] {
+        min-height: 250px !important;
+    }
+
+    /* 总时长仪表盘 */
+    #durationGaugeChart {
+        max-height: 180px;
+    }
+
+    /* 热力图文字 */
+    .hourly-heatmap-container {
+        font-size: 0.8em;
+    }
+
+    /* 模型偏好图例 */
+    .stats-card canvas#modelPieChart {
+        max-height: 200px;
+    }
+
+    /* 跨列卡片 */
+    .stats-card[style*="grid-column: span"] {
+        grid-column: span 1 !important;
+    }
+
+    /* 卡片悬停效果禁用（移动端） */
+    .stats-card:hover {
+        transform: none;
+    }
+
+    /* 折叠按钮更大的点击区域 */
+    .card-toggle-btn {
+        padding: 10px;
+        font-size: 1.2em;
+    }
+}
+
+/* 超小屏幕适配 */
+@media (max-width: 360px) {
+    .stats-dashboard {
+        padding: 8px;
+    }
+
+    .stats-metrics-row {
+        grid-template-columns: 1fr !important;
+    }
+
+    .metric-value {
+        font-size: 1.5em !important;
+    }
+
+    .stats-header-row h3 {
+        font-size: 1rem;
+    }
+
+    .stats-btn {
+        width: 32px;
+        height: 32px;
     }
 }
