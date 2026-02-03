@@ -603,7 +603,14 @@ function addSettingsPanel() {
         </div>
     `;
 
-    $('#extensions_settings').append(panelHTML);
+    const $panel = $(panelHTML);
+    $('#extensions_settings').append($panel);
+    const $drawerToggle = $panel.find('.inline-drawer-toggle');
+    const $drawerContent = $panel.find('.inline-drawer-content');
+    if ($drawerToggle.length && $drawerContent.length && $drawerContent.is(':visible')) {
+        // Collapse the drawer by default (use SillyTavern's handler if present)
+        $drawerToggle.trigger('click');
+    }
     $(`#${CONFIG.ANALYZE_BUTTON_ID}`).on('click', () => generateReport(false, false));
     $(`#${CONFIG.ANALYZE_BUTTON_ID}_global`).on('click', () => generateReport(false, true));
 
