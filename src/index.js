@@ -575,9 +575,9 @@ function addSettingsPanel() {
             <div class="inline-drawer">
                 <div class="inline-drawer-toggle inline-drawer-header">
                     <b>聊天统计</b>
-                    <div class="inline-drawer-icon fa-solid fa-chart-bar down"></div>
+                    <div class="inline-drawer-icon fa-solid fa-chart-bar"></div>
                 </div>
-                <div class="inline-drawer-content stats-drawer">
+                <div class="inline-drawer-content stats-drawer" style="display: none;">
                     <p>分析聊天记录并生成统计报告。</p>
                     <button id="${CONFIG.ANALYZE_BUTTON_ID}" class="menu_button">
                         <i class="fa-solid fa-calculator"></i> 当前角色统计
@@ -603,14 +603,7 @@ function addSettingsPanel() {
         </div>
     `;
 
-    const $panel = $(panelHTML);
-    $('#extensions_settings').append($panel);
-    const $drawerToggle = $panel.find('.inline-drawer-toggle');
-    const $drawerContent = $panel.find('.inline-drawer-content');
-    if ($drawerToggle.length && $drawerContent.length && $drawerContent.is(':visible')) {
-        // Collapse the drawer by default (use SillyTavern's handler if present)
-        $drawerToggle.trigger('click');
-    }
+    $('#extensions_settings').append(panelHTML);
     $(`#${CONFIG.ANALYZE_BUTTON_ID}`).on('click', () => generateReport(false, false));
     $(`#${CONFIG.ANALYZE_BUTTON_ID}_global`).on('click', () => generateReport(false, true));
 
