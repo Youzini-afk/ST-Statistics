@@ -14,7 +14,43 @@ export function parseDate(dateString) {
 
     // Try timestamp
     if (/^\d+$/.test(String(dateString))) {
-        date = new Date(Number(dateString));
+        let ts = Number(dateString);
+        // Support second-based timestamps (10 digits) and millisecond-based timestamps.
+        if (ts > 0 && ts < 1e12) {
+            ts *= 1000;
+        }
+        date = new Date(ts);
+        if (!isNaN(date.getTime())) return date;
+    }
+
+    // Try SillyTavern legacy format: "YYYY-M-D @HHh MMm SSs SSSms"
+    const stMatch = String(dateString).match(
+        /(\d{4})-(\d{1,2})-(\d{1,2})\s*@\s*(\d{1,2})h\s*(\d{1,2})m(?:\s*(\d{1,2})s)?(?:\s*(\d{1,3})ms)?/i
+    );
+    if (stMatch) {
+        const year = Number(stMatch[1]);
+        const month = Number(stMatch[2]) - 1;
+        const day = Number(stMatch[3]);
+        const hour = Number(stMatch[4]);
+        const minute = Number(stMatch[5]);
+        const second = Number(stMatch[6] || 0);
+        const ms = Number(stMatch[7] || 0);
+        date = new Date(year, month, day, hour, minute, second, ms);
+        if (!isNaN(date.getTime())) return date;
+    }
+
+    // Try common local format: "YYYY-MM-DD HH:mm[:ss]"
+    const localMatch = String(dateString).match(
+        /(\d{4})[/-](\d{1,2})[/-](\d{1,2})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/
+    );
+    if (localMatch) {
+        const year = Number(localMatch[1]);
+        const month = Number(localMatch[2]) - 1;
+        const day = Number(localMatch[3]);
+        const hour = Number(localMatch[4]);
+        const minute = Number(localMatch[5]);
+        const second = Number(localMatch[6] || 0);
+        date = new Date(year, month, day, hour, minute, second, 0);
         if (!isNaN(date.getTime())) return date;
     }
 
@@ -155,8 +191,10 @@ export function analyzeChats(chatsData, options = {}) {
             } else {
                 aiMessages++;
                 aiCharCount += text.length;
-                if (msg.extra && msg.extra.token_count) {
-                    aiTokens += msg.extra.token_count;
+                const tokenCountRaw = msg.extra?.token_count;
+                const tokenCount = Number(tokenCountRaw);
+                if (Number.isFinite(tokenCount) && tokenCount >= 0) {
+                    aiTokens += tokenCount;
                 } else {
                     // Fallback estimation for AI messages without token_count
                     aiTokens += estimateTokenCount(text);

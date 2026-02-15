@@ -87,6 +87,11 @@ function saveSettingsNow() {
 
 // Abort controller for cancelling operations
 let currentAbortController = null;
+let currentReportTaskId = 0;
+
+function isAbortLikeError(error) {
+    return error?.name === 'AbortError' || error?.message === 'Operation cancelled';
+}
 
 /**
  * Generate and display statistics report
@@ -107,12 +112,15 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
     }
     currentAbortController = new AbortController();
     const abortSignal = currentAbortController.signal;
+    const reportTaskId = ++currentReportTaskId;
+    const isStaleTask = () => abortSignal.aborted || reportTaskId !== currentReportTaskId;
 
     const context = getContextSafe();
     if (!context) {
         toastr.error('无法获取上下文信息。', 'Stats');
         return;
     }
+    if (isStaleTask()) return;
     const characterId = context.characterId;
 
     // Determine mode: if no character selected, use global mode
@@ -137,7 +145,8 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
 
     baseCacheKey = cacheKey;
 
-    const rangeKey = dateRange && (dateRange.start || dateRange.end)
+    const hasExplicitRange = !!(dateRange && (dateRange.start || dateRange.end));
+    const rangeKey = hasExplicitRange
         ? `__${dateRange.start || ''}_${dateRange.end || ''}`
         : '';
     cacheKey = `${baseCacheKey}${rangeKey}`;
@@ -150,8 +159,10 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
         try {
             const backup = JSON.parse(localStorage.getItem(CACHE_BACKUP_KEY) || '{}');
             backup[cacheKey] = cacheData;
-            backup.__index = backup.__index || {};
-            backup.__index[baseCacheKey] = cacheKey;
+            if (!hasExplicitRange) {
+                backup.__index = backup.__index || {};
+                backup.__index[baseCacheKey] = cacheKey;
+            }
             localStorage.setItem(CACHE_BACKUP_KEY, JSON.stringify(backup));
             logger.log('Cache backed up to localStorage');
         } catch (e) {
@@ -166,6 +177,34 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
             return backup;
         } catch (e) {
             return {};
+        }
+    };
+
+    const clearLocalStorageCache = () => {
+        try {
+            const backup = JSON.parse(localStorage.getItem(CACHE_BACKUP_KEY) || '{}');
+            let changed = false;
+
+            if (backup[cacheKey]) {
+                delete backup[cacheKey];
+                changed = true;
+            }
+
+            if (!hasExplicitRange && backup.__index && backup.__index[baseCacheKey]) {
+                const indexedKey = backup.__index[baseCacheKey];
+                if (indexedKey && backup[indexedKey]) {
+                    delete backup[indexedKey];
+                    changed = true;
+                }
+                delete backup.__index[baseCacheKey];
+                changed = true;
+            }
+
+            if (changed) {
+                localStorage.setItem(CACHE_BACKUP_KEY, JSON.stringify(backup));
+            }
+        } catch (e) {
+            logger.error('localStorage cache clear failed:', e);
         }
     };
 
@@ -203,7 +242,7 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
     let cachedEntry = (!forceRefresh && settings.cache) ? settings.cache[cacheKey] : null;
     logger.log(`Cache check: forceRefresh=${forceRefresh}, cacheKey=${cacheKey}, hasCacheEntry=${!!cachedEntry}, cacheKeys=${settings.cache ? Object.keys(settings.cache).join(',') : 'none'}`);
     
-    if (!forceRefresh && settings.cache && !cachedEntry && settings.cacheIndex && settings.cacheIndex[baseCacheKey]) {
+    if (!forceRefresh && hasExplicitRange && settings.cache && !cachedEntry && settings.cacheIndex && settings.cacheIndex[baseCacheKey]) {
         const indexedKey = settings.cacheIndex[baseCacheKey];
         logger.log(`Trying indexed key: ${indexedKey}`);
         if (settings.cache[indexedKey]) {
@@ -211,7 +250,7 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
             cacheKey = indexedKey;
         }
     }
-    if (!forceRefresh && settings.cache && !cachedEntry) {
+    if (!forceRefresh && hasExplicitRange && settings.cache && !cachedEntry) {
         const candidateKeys = Object.keys(settings.cache).filter(key => key === baseCacheKey || key.startsWith(`${baseCacheKey}__`));
         logger.log(`Trying candidate keys: ${candidateKeys.join(',')}`);
         if (candidateKeys.length > 0) {
@@ -227,7 +266,7 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
         if (!hasDailyDuration) {
             logger.log('Cache has empty dailyDuration, trying localStorage backup...');
             const backup = loadFromLocalStorage();
-            const backupKey = backup.__index?.[baseCacheKey] || cacheKey;
+            const backupKey = hasExplicitRange ? cacheKey : baseCacheKey;
             if (backup[backupKey] && backup[backupKey].stats?.dailyDuration && Object.keys(backup[backupKey].stats.dailyDuration).length > 0) {
                 logger.log(`Found valid backup in localStorage for ${backupKey}`);
                 cachedEntry = backup[backupKey];
@@ -242,8 +281,8 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
     if (!forceRefresh && !cachedEntry) {
         logger.log('No cache in settings, trying localStorage backup...');
         const backup = loadFromLocalStorage();
-        const backupKey = backup.__index?.[baseCacheKey];
-        if (backupKey && backup[backupKey]) {
+        const backupKey = hasExplicitRange ? cacheKey : baseCacheKey;
+        if (backup[backupKey]) {
             logger.log(`Found backup in localStorage for ${backupKey}`);
             cachedEntry = backup[backupKey];
             cacheKey = backupKey;
@@ -254,6 +293,7 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
     }
 
     if (!forceRefresh && cachedEntry) {
+        if (isStaleTask()) return;
         logger.log(`Using cached stats for ${reportTitle}, has dailyDuration: ${!!cachedEntry.stats?.dailyDuration}, keys: ${Object.keys(cachedEntry.stats?.dailyDuration || {}).length}`);
         const cachedStats = cachedEntry.stats ? cachedEntry.stats : cachedEntry;
         if (!cachedStats.__meta) {
@@ -278,11 +318,29 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
     }
 
     // Clear cache if force refresh
-    if (forceRefresh && settings.cache && settings.cache[cacheKey]) {
-        logger.log(`Clearing cache for ${reportTitle}`);
-        delete settings.cache[cacheKey];
-        saveSettingsNow();
+    if (forceRefresh) {
+        let cacheChanged = false;
+        if (settings.cache && settings.cache[cacheKey]) {
+            logger.log(`Clearing cache for ${reportTitle}`);
+            delete settings.cache[cacheKey];
+            cacheChanged = true;
+        }
+        if (!hasExplicitRange && settings.cacheIndex && settings.cacheIndex[baseCacheKey]) {
+            const indexedKey = settings.cacheIndex[baseCacheKey];
+            if (settings.cache && settings.cache[indexedKey]) {
+                delete settings.cache[indexedKey];
+                cacheChanged = true;
+            }
+            delete settings.cacheIndex[baseCacheKey];
+            cacheChanged = true;
+        }
+        clearLocalStorageCache();
+        if (cacheChanged) {
+            saveSettingsNow();
+        }
     }
+
+    if (isStaleTask()) return;
 
     // Show loading overlay
     showOverlay(`
@@ -322,6 +380,7 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
         if (isGlobalMode) {
             // Progress callback for global mode
             const onProgress = (currentChar, totalChars, totalChats) => {
+                if (isStaleTask()) return;
                 const percentage = Math.round((currentChar / totalChars) * 100);
                 $('#stats-progress-bar').val(percentage);
                 $('#stats-count-text').text(`角色 ${currentChar} / ${totalChars}，共 ${totalChats} 个聊天`);
@@ -332,6 +391,7 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
         } else {
             // Progress callback for single character
             const onProgress = (current, total) => {
+                if (isStaleTask()) return;
                 if (total > 5) {
                     const percentage = Math.round((current / total) * 100);
                     $('#stats-progress-bar').val(percentage);
@@ -344,6 +404,8 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
 
             chatsData = await fetchAllChats(avatarUrl, onProgress, abortSignal);
         }
+
+        if (isStaleTask()) return;
 
         if (chatsData.length === 0) {
             const emptyMessage = isGlobalMode ? '没有找到任何聊天记录。' : '该角色没有找到任何聊天记录。';
@@ -397,12 +459,14 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
         // Analyze data
         $('#stats-status-text').text('数据读取完毕，正在计算统计指标...');
         await new Promise(resolve => setTimeout(resolve, 50));
+        if (isStaleTask()) return;
 
         const stats = analyzeChats(chatsData, {
             startDate: normalizedRange.start,
             endDate: normalizedRange.end
         });
         stats.__meta = { dateRange: normalizedRange, dateBounds };
+        if (isStaleTask()) return;
 
         // Cache results
         if (!settings.cache) {
@@ -413,7 +477,9 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
         if (!settings.cacheIndex) {
             settings.cacheIndex = {};
         }
-        settings.cacheIndex[baseCacheKey] = cacheKey;
+        if (!hasExplicitRange) {
+            settings.cacheIndex[baseCacheKey] = cacheKey;
+        }
         
         // Log cache data for debugging
         logger.log(`Caching stats for ${cacheKey}, totalDuration: ${stats.overview?.totalDurationMinutes}m, dailyDuration keys: ${Object.keys(stats.dailyDuration || {}).length}`);
@@ -423,6 +489,7 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
         
         // Save settings
         saveSettingsNow();
+        if (isStaleTask()) return;
 
         // Display dashboard
         const dashboardHTML = generateDashboardHTML(stats, isGlobalMode ? null : character, isGlobalMode, settings.theme);
@@ -434,6 +501,10 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
         toastr.success('统计报告生成完毕！', 'Stats');
 
     } catch (error) {
+        if (isAbortLikeError(error) || isStaleTask()) {
+            logger.log('Report generation cancelled or superseded.');
+            return;
+        }
         logger.error('Report generation failed:', error);
         const errorMessage = escapeHtml(error?.message || 'Unknown error');
         $('#stats-content-wrapper').html(`
@@ -458,6 +529,10 @@ async function generateReport(forceRefresh = false, globalMode = false, dateRang
         setupDashboardEvents((force, range) => {
             generateReport(force, isGlobalMode, range);
         });
+    } finally {
+        if (reportTaskId === currentReportTaskId) {
+            currentAbortController = null;
+        }
     }
 }
 

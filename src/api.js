@@ -5,6 +5,19 @@ import { Logger } from './logger.js';
 
 const logger = new Logger('Stats-API');
 
+function normalizeChatList(payload) {
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.results)) return payload.results;
+    if (Array.isArray(payload?.chats)) return payload.chats;
+    return [];
+}
+
+function normalizeMessages(payload) {
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.messages)) return payload.messages;
+    return [];
+}
+
 /**
  * Count tokens for given text using SillyTavern's tokenizer API
  * @param {string} text - Text to tokenize
@@ -65,7 +78,8 @@ export async function fetchAllChats(avatarUrl, onProgress, abortSignal) {
             throw new Error(`Failed to search chats: ${searchResponse.status}`);
         }
 
-        const chatList = await searchResponse.json();
+        const chatListPayload = await searchResponse.json();
+        const chatList = normalizeChatList(chatListPayload);
         const totalFiles = chatList.length;
         logger.log(`Found ${totalFiles} chat files.`);
 
@@ -101,7 +115,8 @@ export async function fetchAllChats(avatarUrl, onProgress, abortSignal) {
                     });
 
                     if (response.ok) {
-                        const messages = await response.json();
+                        const messagesPayload = await response.json();
+                        const messages = normalizeMessages(messagesPayload);
                         return {
                             metadata: chatMeta,
                             messages: messages
@@ -135,7 +150,7 @@ export async function fetchAllChats(avatarUrl, onProgress, abortSignal) {
     } catch (error) {
         if (error.name === 'AbortError' || error.message === 'Operation cancelled') {
             logger.log('Fetch operation cancelled.');
-            return [];
+            throw error;
         }
         logger.error('Fatal error in fetchAllChats:', error);
         throw error;
@@ -185,7 +200,8 @@ export async function fetchAllCharactersChats(onProgress, abortSignal) {
                 continue;
             }
 
-            const chatList = await searchResponse.json();
+            const chatListPayload = await searchResponse.json();
+            const chatList = normalizeChatList(chatListPayload);
             
             // Fetch chat contents
             for (const chatMeta of chatList) {
@@ -207,7 +223,8 @@ export async function fetchAllCharactersChats(onProgress, abortSignal) {
                     });
 
                     if (response.ok) {
-                        const messages = await response.json();
+                        const messagesPayload = await response.json();
+                        const messages = normalizeMessages(messagesPayload);
                         allChats.push({
                             metadata: { ...chatMeta, character_name: character.name },
                             messages: messages

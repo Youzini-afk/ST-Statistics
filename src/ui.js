@@ -765,9 +765,26 @@ export function setupDashboardEvents(refreshCallback) {
     });
 
     const getCurrentDateRange = () => {
-        const start = $overlay.find('.stats-date-input.start-date').val();
-        const end = $overlay.find('.stats-date-input.end-date').val();
-        return { start: start || '', end: end || '' };
+        const $startInput = $overlay.find('.stats-date-input.start-date');
+        const $endInput = $overlay.find('.stats-date-input.end-date');
+        const start = $startInput.val() || '';
+        const end = $endInput.val() || '';
+        const min = $startInput.attr('min') || '';
+        const max = $endInput.attr('max') || '';
+        return { start, end, min, max };
+    };
+
+    const normalizeDateRange = (range) => {
+        if (!range.start && !range.end) {
+            return null;
+        }
+
+        // Treat boundary-to-boundary as full range so refresh can recompute newest bounds.
+        if (range.min && range.max && range.start === range.min && range.end === range.max) {
+            return null;
+        }
+
+        return { start: range.start, end: range.end };
     };
 
     // Apply date range
@@ -778,7 +795,7 @@ export function setupDashboardEvents(refreshCallback) {
             return;
         }
         if (refreshCallback) {
-            refreshCallback(true, range);
+            refreshCallback(true, normalizeDateRange(range));
         }
     });
 
@@ -786,7 +803,7 @@ export function setupDashboardEvents(refreshCallback) {
     $overlay.off('click', '.refresh-btn').on('click', '.refresh-btn', function() {
         const range = getCurrentDateRange();
         if (refreshCallback) {
-            refreshCallback(true, range);
+            refreshCallback(true, normalizeDateRange(range));
         }
     });
 
@@ -851,7 +868,7 @@ export function setupDashboardEvents(refreshCallback) {
     });
 
     // Click outside to close - must be last and use specific target check
-    $overlay.off('click', '.stats-overlay-backdrop').on('click', function(e) {
+    $overlay.off('click.statsBackdrop').on('click.statsBackdrop', function(e) {
         // Only close if clicking directly on overlay background, not on dashboard content
         if ($(e.target).closest('.stats-dashboard').length === 0) {
             closeOverlay();
